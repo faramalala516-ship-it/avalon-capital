@@ -35,11 +35,15 @@ function createExecutionContext() {
   };
 }
 
-export default function handler(request, env = {}, ctx = createExecutionContext()) {
+async function fetchHandler(request, env = {}, ctx = createExecutionContext()) {
   return worker.fetch(request, env, ctx);
 }
 
-export { worker };
+export default {
+  fetch: fetchHandler
+};
+
+export { fetchHandler as fetch, worker };
 `
 );
 
