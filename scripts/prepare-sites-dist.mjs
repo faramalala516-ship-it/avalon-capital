@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
 const requiredPaths = [".open-next/worker.js", ".open-next/assets", ".openai/hosting.json", "wrangler.jsonc"];
 
@@ -10,9 +10,9 @@ for (const requiredPath of requiredPaths) {
 
 rmSync("dist", { recursive: true, force: true });
 mkdirSync("dist", { recursive: true });
-cpSync(".open-next", "dist/.open-next", { recursive: true });
+cpSync(".open-next", "dist/open-next", { recursive: true });
 cpSync(".openai", "dist/.openai", { recursive: true });
-cpSync("wrangler.jsonc", "dist/wrangler.jsonc");
+writeFileSync("dist/wrangler.jsonc", readFileSync("wrangler.jsonc", "utf8").replaceAll(".open-next", "open-next"));
 mkdirSync("dist/server", { recursive: true });
 writeFileSync(
   "dist/package.json",
@@ -20,7 +20,7 @@ writeFileSync(
 );
 writeFileSync(
   "dist/server/index.js",
-  `import worker from "../.open-next/worker.js";
+  `import worker from "../open-next/worker.js";
 
 function createExecutionContext() {
   return {
