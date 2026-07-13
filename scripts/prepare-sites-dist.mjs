@@ -16,7 +16,10 @@ writeFileSync(
   readFileSync("wrangler.jsonc", "utf8").replaceAll(".open-next", "server/open-next")
 );
 mkdirSync("dist/server", { recursive: true });
+mkdirSync("dist/client", { recursive: true });
 cpSync(".open-next", "dist/server/open-next", { recursive: true });
+rmSync("dist/server/open-next/assets", { recursive: true, force: true });
+cpSync(".open-next/assets", "dist/client", { recursive: true });
 writeFileSync(
   "dist/package.json",
   `${JSON.stringify({ type: "module" }, null, 2)}\n`
