@@ -10,17 +10,20 @@ for (const requiredPath of requiredPaths) {
 
 rmSync("dist", { recursive: true, force: true });
 mkdirSync("dist", { recursive: true });
-cpSync(".open-next", "dist/open-next", { recursive: true });
 cpSync(".openai", "dist/.openai", { recursive: true });
-writeFileSync("dist/wrangler.jsonc", readFileSync("wrangler.jsonc", "utf8").replaceAll(".open-next", "open-next"));
+writeFileSync(
+  "dist/wrangler.jsonc",
+  readFileSync("wrangler.jsonc", "utf8").replaceAll(".open-next", "server/open-next")
+);
 mkdirSync("dist/server", { recursive: true });
+cpSync(".open-next", "dist/server/open-next", { recursive: true });
 writeFileSync(
   "dist/package.json",
   `${JSON.stringify({ type: "module" }, null, 2)}\n`
 );
 writeFileSync(
   "dist/server/index.js",
-  `import worker from "../open-next/worker.js";
+  `import worker from "./open-next/worker.js";
 
 function createExecutionContext() {
   return {
