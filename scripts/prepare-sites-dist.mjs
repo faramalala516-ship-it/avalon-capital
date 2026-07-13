@@ -33,7 +33,11 @@ for (const entry of readdirSync(appHtmlDir)) {
 
   const pageName = basename(entry, ".html");
   const route = pageName === "index" ? "/" : `/${pageName}`;
-  pages[route] = readFileSync(filePath, "utf8");
+  const pageHtml = readFileSync(filePath, "utf8");
+  const staticPageDir = route === "/" ? "dist/client" : join("dist/client", pageName);
+  pages[route] = pageHtml;
+  mkdirSync(staticPageDir, { recursive: true });
+  writeFileSync(join(staticPageDir, "index.html"), pageHtml);
 }
 
 const serverSource = `const pages = ${JSON.stringify(pages)};
