@@ -1,0 +1,12 @@
+node_modules
+.next
+.tools
+.env
+.env*.local
+dist
+coverage
+prisma/dev.db
+*.tsbuildinfo
+dev-server*.log
+dev-server.pid
+lighthouse*.json

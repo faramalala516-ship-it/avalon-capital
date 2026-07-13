@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ANALYST
+  ADMIN
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum AssetClass {
+  EQUITY
+  BOND
+  FX
+  COMMODITY
+  CRYPTO
+  GEMSTONE
+  CASH
+  ALTERNATIVE
+}
+
+enum OrderStatus {
+  PENDING
+  FILLED
+  CANCELED
+  FAILED
+}
+
+model User {
+  id              String         @id @default(cuid())
+  clerkId         String         @unique
+  email           String         @unique
+  name            String?
+  role            Role           @default(USER)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  subscriptions   Subscription[]
+  portfolios      Portfolio[]
+  orders          Order[]
+  payments        Payment[]
+  notifications   Notification[]
+  aiHistory       AIHistory[]
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String
+  stripeCustomerId     String?
+  stripeSubscriptionId String?            @unique
+  plan                 String
+  status               SubscriptionStatus @default(TRIALING)
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  summary     String
+  pdfUrl      String?
+  charts      Json?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Article {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  excerpt     String
+  content     String
+  tags        String[]
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model TradingSignal {
+  id          String     @id @default(cuid())
+  asset       String
+  assetClass  AssetClass
+  timeframe   String
+  setup       String
+  support     String
+  resistance  String
+  probability Float
+  indicators  Json
+  expiresAt   DateTime?
+  createdAt   DateTime   @default(now())
+}
+
+model MacroEvent {
+  id          String   @id @default(cuid())
+  country     String
+  indicator   String
+  importance  String
+  actual      String?
+  consensus   String?
+  previous    String?
+  releasedAt  DateTime
+  impact      Json?
+  createdAt   DateTime @default(now())
+}
+
+model Gemstone {
+  id            String   @id @default(cuid())
+  name          String
+  type          String
+  origin        String
+  carat         Float
+  certification String
+  history       String
+  imageUrl      String
+  valueCurve    Json
+  aiRating      String
+  rarityIndex   Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Portfolio {
+  id          String              @id @default(cuid())
+  userId      String
+  name        String
+  baseCurrency String             @default("USD")
+  riskProfile String              @default("balanced")
+  targetVar   Float?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positions   PortfolioPosition[]
+}
+
+model PortfolioPosition {
+  id          String     @id @default(cuid())
+  portfolioId String
+  asset       String
+  assetClass  AssetClass
+  quantity    Float
+  marketValue Float
+  weight      Float
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  asset       String
+  assetClass  AssetClass
+  side        String
+  quantity    Float
+  limitPrice  Float?
+  status      OrderStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  userId          String
+  stripePaymentId String?  @unique
+  amount          Int
+  currency        String   @default("eur")
+  status          String
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AIHistory {
+  id        String   @id @default(cuid())
+  userId    String?
+  prompt    String
+  response  Json
+  model     String
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
