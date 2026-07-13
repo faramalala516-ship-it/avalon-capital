@@ -10,3 +10,5 @@ prisma/dev.db
 dev-server*.log
 dev-server.pid
 lighthouse*.json
+.open-next
+dist
