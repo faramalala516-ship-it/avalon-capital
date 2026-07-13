@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
-    "opennext:build": "opennextjs-cloudflare build",
-    "opennext:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "build": "npm run next:build && npm run opennext:build && node scripts/prepare-sites-dist.mjs",
+    "next:build": "prisma generate && next build",
+    "opennext:build": "opennextjs-cloudflare build --skipNextBuild --noMinify",
+    "opennext:preview": "npm run build && opennextjs-cloudflare preview",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
