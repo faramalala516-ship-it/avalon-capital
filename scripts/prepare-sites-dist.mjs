@@ -118,7 +118,11 @@ function integrations(env = {}) {
   };
 }
 
-function buildAnalysis(question = "Analyse XAUUSD", agentId = "gem-trading-x") {
+function buildAnalysis(
+  question = "Analyse XAUUSD",
+  agentId = "gem-trading-x",
+  providerStatus = "openai_not_configured"
+) {
   const agent = agents.find((item) => item.id === agentId)?.name ?? "Avalon Market AI";
 
   return {
@@ -150,7 +154,85 @@ XAUUSD reste l'actif prioritaire. Le cadre utilise des niveaux Avalon statiques 
 Information educative et analytique uniquement. Aucun conseil financier personnalise, aucune promesse de performance.\`,
     agent,
     source: "local-fallback",
-    providerStatus: integrations().openai.configured ? "openai_unavailable" : "openai_not_configured",
+    providerStatus,
+    compliance
+  };
+}
+
+function providerStatusFor(error) {
+  if (error?.status === 401 || error?.status === 403) return "openai_auth_error";
+  if (error?.status === 429) return "openai_rate_limited";
+  return "openai_unavailable";
+}
+
+function responseOutputText(payload) {
+  if (typeof payload?.output_text === "string") return payload.output_text;
+
+  for (const item of payload?.output ?? []) {
+    for (const content of item?.content ?? []) {
+      if (content?.type === "output_text" && typeof content.text === "string") {
+        return content.text;
+      }
+    }
+  }
+
+  return "";
+}
+
+async function runOpenAIAnalysis(question, agentId, env) {
+  const agent = agents.find((item) => item.id === agentId)?.name ?? "Avalon Market AI";
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer " + env.OPENAI_API_KEY,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model: env.OPENAI_MODEL || "gpt-5.6-luna",
+      input: [
+        {
+          role: "system",
+          content:
+            "Tu es l'analyste institutionnel Avalon Capital. N'invente aucune donnee temps reel. " +
+            "Distingue les donnees fournies, le contexte Avalon, les hypotheses et les donnees manquantes. " +
+            "Inclue validation, invalidation et conditions de non-trade. Reponds en francais."
+        },
+        {
+          role: "user",
+          content: "Agent selectionne: " + agent + "\\nDemande utilisateur: " + question
+        }
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "market_analysis",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: { answer: { type: "string" } },
+            required: ["answer"]
+          }
+        }
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const error = new Error("OpenAI request failed");
+    error.status = response.status;
+    throw error;
+  }
+
+  const payload = await response.json();
+  const outputText = responseOutputText(payload);
+  const parsed = JSON.parse(outputText);
+
+  return {
+    answer: parsed.answer,
+    agent,
+    source: "openai",
+    providerStatus: "openai_live",
     compliance
   };
 }
@@ -188,7 +270,21 @@ async function handleApi(path, request, env) {
 
   if (path === "/api/market-ai" && request.method === "POST") {
     const body = await parseJson(request);
-    return json(buildAnalysis(body.question, body.agentId));
+    const question = typeof body.question === "string" ? body.question.trim() : "";
+
+    if (question.length < 2 || question.length > 1000) {
+      return json({ error: "Question invalide" }, 400);
+    }
+
+    if (!env.OPENAI_API_KEY) {
+      return json(buildAnalysis(question, body.agentId, "openai_not_configured"));
+    }
+
+    try {
+      return json(await runOpenAIAnalysis(question, body.agentId, env));
+    } catch (error) {
+      return json(buildAnalysis(question, body.agentId, providerStatusFor(error)));
+    }
   }
 
   if (path === "/api/agents" && request.method === "GET") {
