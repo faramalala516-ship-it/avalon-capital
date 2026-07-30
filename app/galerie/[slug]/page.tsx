@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProtectedPhoto } from "@/components/protected-photo";
 import { FormatPurchase } from "@/components/format-purchase";
+import { RegisteredPreview } from "@/components/registered-preview";
 import { formatPrice, getPhotoBySlug } from "@/lib/gallery-data";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -23,13 +24,14 @@ export default async function PhotoDetailPage({ params }: Props) {
       </p>
 
       <div className="mt-6 grid gap-10 lg:grid-cols-[1.1fr_.9fr]">
-        <div>
+        <div className="space-y-4">
           <ProtectedPhoto
             src={photo.imageUrl}
             alt={photo.title}
             priority
             className="aspect-[4/5] w-full"
           />
+          <RegisteredPreview photo={photo} />
         </div>
         <div className="space-y-6">
           <div>

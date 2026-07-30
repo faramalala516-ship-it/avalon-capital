@@ -128,9 +128,15 @@ export default function EspacePage() {
                       <p className="font-display text-xl text-aqua-deep">{p.photoTitle}</p>
                       <p className="text-sm text-stone">
                         {p.mineral} · format {p.formatId} · {formatPrice(p.amountEur)}
+                        {p.paymentMethod === "card" ? " · carte" : p.paymentMethod === "transfer" ? " · virement" : ""}
                       </p>
                       <p className="mt-1 text-xs uppercase tracking-[0.14em] text-stone-soft">
-                        {p.reference} · {p.status === "confirmed" ? "confirmé" : "en attente de virement"}
+                        {p.reference} ·{" "}
+                        {p.status === "confirmed"
+                          ? "confirmé"
+                          : p.paymentMethod === "card"
+                            ? "paiement carte"
+                            : "en attente de virement"}
                       </p>
                     </div>
                     {p.certificateId && p.txHash ? (

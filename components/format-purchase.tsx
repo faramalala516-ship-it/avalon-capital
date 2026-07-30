@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { IMAGE_FORMATS, formatPrice, priceForFormat, type GalleryPhoto } from "@/lib/gallery-data";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +11,7 @@ import {
   writeStoredUser,
   type PurchaseRecord
 } from "@/lib/session";
-import { BankTransferPanel } from "@/components/bank-transfer-panel";
+import { PaymentCheckout, type PaymentMethod } from "@/components/payment-checkout";
 
 export function FormatPurchase({ photo }: { photo: GalleryPhoto }) {
   const available = useMemo(
@@ -20,13 +21,15 @@ export function FormatPurchase({ photo }: { photo: GalleryPhoto }) {
   const [formatId, setFormatId] = useState(available[0]?.id ?? "editorial-a4");
   const [order, setOrder] = useState<PurchaseRecord | null>(null);
   const [error, setError] = useState("");
+  const [method, setMethod] = useState<PaymentMethod>("card");
+  const [busy, setBusy] = useState(false);
 
   const amount = priceForFormat(photo.priceEur, formatId);
 
   function startPurchase() {
     const user = readStoredUser();
     if (!user) {
-      setError("Ouvrez d'abord votre page personnelle avec votre e-mail.");
+      setError("Enregistrez-vous d'abord (espace personnel) — l'abonnement premium n'est pas requis pour acheter.");
       return;
     }
     setError("");
@@ -39,6 +42,7 @@ export function FormatPurchase({ photo }: { photo: GalleryPhoto }) {
       formatId,
       amountEur: amount,
       status: "awaiting_transfer",
+      paymentMethod: method,
       reference,
       purchasedAt: new Date().toISOString()
     };
@@ -48,39 +52,52 @@ export function FormatPurchase({ photo }: { photo: GalleryPhoto }) {
     setOrder(purchase);
   }
 
-  async function confirmPaid() {
+  async function finalizePurchase(paymentMethod: "card" | "transfer", paymentId?: string) {
     if (!order) return;
     const user = readStoredUser();
     if (!user) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/certificate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          photoId: photo.id,
+          photoTitle: photo.title,
+          ownerEmail: user.email,
+          ownerName: user.name,
+          formatId: order.formatId,
+          amountEur: order.amountEur
+        })
+      });
+      const cert = await res.json();
 
-    const res = await fetch("/api/certificate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        photoId: photo.id,
-        photoTitle: photo.title,
-        ownerEmail: user.email,
-        ownerName: user.name,
-        formatId: order.formatId,
-        amountEur: order.amountEur
-      })
-    });
-    const cert = await res.json();
-
-    const purchases = user.purchases.map((p) =>
-      p.id === order.id
-        ? {
-            ...p,
-            status: "confirmed" as const,
-            certificateId: cert.certificateId as string,
-            txHash: cert.txHash as string
-          }
-        : p
-    );
-    const next = { ...user, purchases };
-    next.badges = computeBadges(next);
-    writeStoredUser(next);
-    setOrder({ ...order, status: "confirmed", certificateId: cert.certificateId, txHash: cert.txHash });
+      const purchases = user.purchases.map((p) =>
+        p.id === order.id
+          ? {
+              ...p,
+              status: "confirmed" as const,
+              paymentMethod,
+              paymentId,
+              certificateId: cert.certificateId as string,
+              txHash: cert.txHash as string
+            }
+          : p
+      );
+      const next = { ...user, purchases };
+      next.badges = computeBadges(next);
+      writeStoredUser(next);
+      setOrder({
+        ...order,
+        status: "confirmed",
+        paymentMethod,
+        paymentId,
+        certificateId: cert.certificateId,
+        txHash: cert.txHash
+      });
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -88,6 +105,10 @@ export function FormatPurchase({ photo }: { photo: GalleryPhoto }) {
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-gold-deep">Formats disponibles</p>
         <h2 className="mt-2 font-display text-3xl text-aqua-deep">Choisir le rendu</h2>
+        <p className="mt-2 text-sm text-stone">
+          Achat ouvert à tous les membres enregistrés — sans abonnement premium. Le Salon Privé
+          n&apos;est requis que pour la salle des enchères.
+        </p>
       </div>
 
       <div className="space-y-3">
@@ -123,31 +144,61 @@ export function FormatPurchase({ photo }: { photo: GalleryPhoto }) {
 
       {!order ? (
         <div className="space-y-3">
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-red-700">
+              {error}{" "}
+              <Link href="/espace" className="underline">
+                Ouvrir mon espace
+              </Link>
+            </p>
+          ) : null}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setMethod("card")}
+              className={
+                method === "card"
+                  ? "rounded-sm border border-aqua-deep bg-aqua-deep/10 px-3 py-2 text-sm text-aqua-deep"
+                  : "rounded-sm border border-gold/25 px-3 py-2 text-sm"
+              }
+            >
+              Visa / Mastercard
+            </button>
+            <button
+              type="button"
+              onClick={() => setMethod("transfer")}
+              className={
+                method === "transfer"
+                  ? "rounded-sm border border-aqua-deep bg-aqua-deep/10 px-3 py-2 text-sm text-aqua-deep"
+                  : "rounded-sm border border-gold/25 px-3 py-2 text-sm"
+              }
+            >
+              Virement
+            </button>
+          </div>
           <Button type="button" size="lg" className="w-full" onClick={startPurchase}>
             Commander — {formatPrice(amount)}
           </Button>
-          <p className="text-xs leading-5 text-stone">
-            Paiement par virement bancaire international. Le master et le certificat blockchain + QR sont
-            délivrés après confirmation du crédit.
-          </p>
         </div>
+      ) : order.status !== "confirmed" ? (
+        <PaymentCheckout
+          reference={order.reference}
+          amountEur={order.amountEur}
+          method={method}
+          onMethodChange={setMethod}
+          busy={busy}
+          onCardSuccess={() => void finalizePurchase("card")}
+          onTransferConfirm={() => void finalizePurchase("transfer")}
+        />
       ) : (
-        <div className="space-y-4">
-          <BankTransferPanel reference={order.reference} amountEur={order.amountEur} />
-          {order.status === "awaiting_transfer" ? (
-            <Button type="button" variant="gold" className="w-full" onClick={() => void confirmPaid()}>
-              J&apos;ai effectué le virement — générer certificat &amp; QR
-            </Button>
-          ) : (
-            <div className="rounded-sm border border-aqua/30 bg-aqua-mist/40 p-4 text-sm leading-6 text-ink">
-              Acquisition confirmée. Certificat <strong>{order.certificateId}</strong>
-              <br />
-              Empreinte : <span className="break-all font-mono text-xs">{order.txHash}</span>
-              <br />
-              Retrouvez le QR et vos badges dans votre espace personnel.
-            </div>
-          )}
+        <div className="rounded-sm border border-aqua/30 bg-aqua-mist/40 p-4 text-sm leading-6 text-ink">
+          Acquisition confirmée
+          {order.paymentMethod === "card" ? " (carte)" : " (virement)"}. Certificat{" "}
+          <strong>{order.certificateId}</strong>
+          <br />
+          Empreinte : <span className="break-all font-mono text-xs">{order.txHash}</span>
+          <br />
+          Retrouvez le QR et vos badges dans votre espace personnel.
         </div>
       )}
     </div>

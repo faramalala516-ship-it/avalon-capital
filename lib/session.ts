@@ -6,6 +6,8 @@ export type PurchaseRecord = {
   formatId: string;
   amountEur: number;
   status: "awaiting_transfer" | "confirmed";
+  paymentMethod?: "card" | "transfer";
+  paymentId?: string;
   reference: string;
   purchasedAt: string;
   certificateId?: string;

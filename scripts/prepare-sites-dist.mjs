@@ -133,6 +133,12 @@ async function handleApi(path, request, env = {}) {
     return json({ answer: conciergeReply(question), source: "local-fallback", providerStatus: "openai_not_configured" });
   }
 
+  if (path === "/api/payments/card" && request.method === "POST") {
+    const body = await parseJson(request);
+    if (!body.reference || !body.amountEur) return json({ error: "Donnees invalides" }, 400);
+    return json({ ok: true, mode: "demo_authorized", paymentId: "pay_demo", status: "succeeded", brand: body.brand || "visa", last4: body.last4 || "0000", reference: body.reference });
+  }
+
   if (path === "/api/certificate" && request.method === "POST") {
     const body = await parseJson(request);
     if (!body.photoId || !body.ownerEmail) return json({ error: "Donnees invalides" }, 400);

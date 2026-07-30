@@ -124,9 +124,161 @@ export const BANK_TRANSFER = {
 
 export const collections: MonthlyCollection[] = [
   {
+    id: "2026-08",
+    monthKey: "2026-08",
+    label: "Août 2026",
+    theme: "Podium des inclusions",
+    intro: "Trois places d’honneur : 1) saphir aux inclusions fantasmagoriques (rutile carboneux alumineux) · 2) grenat grossulaire diamantoïde au métamorphisme progressif · 3) béryl bleu / aigue-marine à ilménite, hématite et œil de chat électrisant.",
+    photos: [
+      {
+        id: "saphir-inclusions-fantasmagoriques",
+        slug: "saphir-inclusions-fantasmagoriques",
+        title: "Saphir aux inclusions fantasmagoriques",
+        mineral: "Saphir · Rutile carboneux alumineux",
+        locality: "Madagascar",
+        description: "Saphir facetté en poire : inclusions fantasmagoriques de rutile carboneux alumineux. Paysage intérieur cosmique, idéal magazines de gemmologie et tableaux Fine Art.",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 25,
+        imageUrl: "/gallery/saphir-inclusions-fantasmagoriques.jpg",
+        featured: true,
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "saphir-nebuleuse-interne",
+        slug: "saphir-nebuleuse-interne",
+        title: "Saphir nébuleuse interne",
+        mineral: "Saphir · Rutile carboneux",
+        locality: "Madagascar",
+        description: "Nébuleuse de soie et aiguilles de rutile au cœur du saphir. Lecture macro des inclusions « fantasmagoriques ».",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 24,
+        imageUrl: "/gallery/saphir-nebuleuse-interne.jpg",
+        featured: true,
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "saphir-architecture-interne",
+        slug: "saphir-architecture-interne",
+        title: "Architecture interne du saphir",
+        mineral: "Saphir · Inclusions cristallines",
+        locality: "Madagascar",
+        description: "Plans géométriques et inclusion rectangulaire suspendue — abstraction minérale pour exposition.",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 22,
+        imageUrl: "/gallery/saphir-architecture-interne.jpg",
+        featured: false,
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "saphir-cabochon-iridescent",
+        slug: "saphir-cabochon-iridescent",
+        title: "Cabochon saphir iridescent",
+        mineral: "Saphir · Rutile carboneux alumineux",
+        locality: "Madagascar",
+        description: "Cabochon sombre aux éclats iridescents — carbone et rutile en constellation.",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 23,
+        imageUrl: "/gallery/saphir-cabochon-iridescent.jpg",
+        featured: false,
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "grenat-grossulaire-diamantoide",
+        slug: "grenat-grossulaire-diamantoide",
+        title: "Grenat grossulaire diamantoïde",
+        mineral: "Grenat grossulaire (démantoïde)",
+        locality: "Madagascar",
+        description: "Cristal dodécaédrique vert lumineux — métamorphisme progressif visible dans les voiles internes. Place d’honneur de la collection.",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 25,
+        imageUrl: "/gallery/grenat-grossulaire-diamantoide.jpg",
+        featured: true,
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "grenat-metamorphisme-progressif",
+        slug: "grenat-metamorphisme-progressif",
+        title: "Grenat au métamorphisme progressif",
+        mineral: "Grenat grossulaire diamantoïde",
+        locality: "Madagascar",
+        description: "Prisme vert mint, voile diagonal et textures de métamorphisme progressif. Cliché solo pour catalogue de foire.",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 22,
+        imageUrl: "/gallery/grenat-metamorphisme-progressif.jpg",
+        featured: true,
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "grenat-grossulaire-voile",
+        slug: "grenat-grossulaire-voile",
+        title: "Grossulaire à voile interne",
+        mineral: "Grenat grossulaire",
+        locality: "Madagascar",
+        description: "Association de clarté et de voiles — lecture du métamorphisme dans la gangue optique du grenat.",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 18,
+        imageUrl: "/gallery/grenat-grossulaire-voile.jpg",
+        featured: false,
+        formats: ["editorial-a4", "tableau-fineart", "expo-grand"]
+      },
+      {
+        id: "aigue-marine-oeil-de-chat",
+        slug: "aigue-marine-oeil-de-chat",
+        title: "Aigue-marine œil de chat",
+        mineral: "Béryl bleu · Ilménite · Hématite · Carbone",
+        locality: "Madagascar",
+        description: "Béryl bleu / aigue-marine : inclusions rares d’ilménite et hématite, trace de carbone énigmatique — œil de chat électrisant.",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 25,
+        imageUrl: "/gallery/aigue-marine-oeil-de-chat.jpg",
+        featured: true,
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "beryl-bleu-inclusions-rares",
+        slug: "beryl-bleu-inclusions-rares",
+        title: "Béryl bleu aux inclusions rares",
+        mineral: "Béryl (aigue-marine) · Ilménite · Hématite",
+        locality: "Madagascar",
+        description: "Teal aquatique et inclusions métalliques rares. Poire facettée pour livres de gemmologie.",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 23,
+        imageUrl: "/gallery/beryl-bleu-inclusions-rares.jpg",
+        featured: true,
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "aigue-marine-eclat-electrique",
+        slug: "aigue-marine-eclat-electrique",
+        title: "Aigue-marine éclat électrique",
+        mineral: "Béryl bleu · Carbone · Hématite",
+        locality: "Madagascar",
+        description: "Inclusion cyan électrique au cœur du béryl — signature carbone / hématite pour collectionneurs.",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 21,
+        imageUrl: "/gallery/aigue-marine-eclat-electrique.jpg",
+        featured: false,
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "beryl-galaxie-interne",
+        slug: "beryl-galaxie-interne",
+        title: "Béryl galaxie interne",
+        mineral: "Béryl · Inclusions iridescentes",
+        locality: "Madagascar",
+        description: "Cabochon aux paillettes iridescentes — constellation minérale, rendu artistique.",
+        technicalNote: "Macro inclusions · rognage stratégique · netteté · fond nacré aquatique",
+        priceEur: 19,
+        imageUrl: "/gallery/beryl-galaxie-interne.jpg",
+        featured: false,
+        formats: ["editorial-a4", "tableau-fineart", "expo-grand"]
+      }
+    ]
+  },
+  {
     id: "2026-07",
     monthKey: "2026-07",
-    label: "Juillet 2026",
+    label: "Juillet 2026 · archive",
     theme: "Prismes Indicolite",
     intro: "Meilleures prises du mois : tourmaline indicolite et mica lépidolite — clichés solo premium, cadrage stratégique et netteté renforcée.",
     photos: [
@@ -324,39 +476,39 @@ export const collections: MonthlyCollection[] = [
 export const auctionLots: AuctionLot[] = [
   {
     id: "lot-01",
-    photoId: "indicolite-prisme-mica",
-    title: "Prisme indicolite & mica nacrée — avant-première",
-    mineral: "Tourmaline indicolite · Lépidolite",
-    imageUrl: "/gallery/indicolite-prisme-mica.jpg",
-    startingBid: 18,
-    currentBid: 24,
-    endsAt: "2026-08-15T20:00:00.000Z",
+    photoId: "saphir-inclusions-fantasmagoriques",
+    title: "Saphir aux inclusions fantasmagoriques — avant-première",
+    mineral: "Saphir · Rutile carboneux alumineux",
+    imageUrl: "/gallery/saphir-inclusions-fantasmagoriques.jpg",
+    startingBid: 20,
+    currentBid: 28,
+    endsAt: "2026-08-28T20:00:00.000Z",
     premiere: true,
-    bids: 7
+    bids: 6
   },
   {
     id: "lot-02",
-    photoId: "indicolite-terminaison",
-    title: "Terminaison hexagonale indicolite — avant-première",
-    mineral: "Tourmaline indicolite",
-    imageUrl: "/gallery/indicolite-terminaison.jpg",
-    startingBid: 16,
-    currentBid: 22,
-    endsAt: "2026-08-15T20:00:00.000Z",
+    photoId: "grenat-grossulaire-diamantoide",
+    title: "Grenat grossulaire diamantoïde — avant-première",
+    mineral: "Grenat grossulaire (démantoïde)",
+    imageUrl: "/gallery/grenat-grossulaire-diamantoide.jpg",
+    startingBid: 18,
+    currentBid: 26,
+    endsAt: "2026-08-28T20:00:00.000Z",
     premiere: true,
-    bids: 5
+    bids: 4
   },
   {
     id: "lot-03",
-    photoId: "indicolite-zonee",
-    title: "Tourmaline zonée indigo — avant-première",
-    mineral: "Tourmaline indicolite",
-    imageUrl: "/gallery/indicolite-zonee.jpg",
-    startingBid: 15,
-    currentBid: 19,
-    endsAt: "2026-08-15T20:00:00.000Z",
+    photoId: "aigue-marine-oeil-de-chat",
+    title: "Aigue-marine œil de chat — avant-première",
+    mineral: "Béryl bleu · Ilménite · Hématite · Carbone",
+    imageUrl: "/gallery/aigue-marine-oeil-de-chat.jpg",
+    startingBid: 18,
+    currentBid: 27,
+    endsAt: "2026-08-28T20:00:00.000Z",
     premiere: true,
-    bids: 4
+    bids: 5
   }
 ];
 
