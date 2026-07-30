@@ -92,18 +92,6 @@ body {
   -webkit-user-drag: none;
 }
 
-.photo-filter-overlay {
-  background:
-    repeating-linear-gradient(
-      -28deg,
-      transparent 0 14px,
-      rgba(255, 255, 255, 0.035) 14px 15px
-    ),
-    radial-gradient(circle at 30% 20%, rgba(212, 188, 148, 0.12), transparent 45%),
-    linear-gradient(180deg, transparent 55%, rgba(13, 61, 69, 0.18));
-  mix-blend-mode: soft-light;
-}
-
 @media print {
   .protected-media,
   .no-print {

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -11,6 +10,8 @@ type Props = {
   className?: string;
   priority?: boolean;
   watermark?: string;
+  /** When true (default), blanks the frame on blur / PrintScreen attempts. */
+  blockScreenshots?: boolean;
 };
 
 export function ProtectedPhoto({
@@ -18,14 +19,25 @@ export function ProtectedPhoto({
   alt,
   className,
   priority,
-  watermark = "Gem'StonEye · aperçu protégé"
+  watermark = "Gem'StonEye · aperçu protégé",
+  blockScreenshots = true
 }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [alert, setAlert] = useState(false);
+  const [shielded, setShielded] = useState(false);
 
-  const flashAlert = useCallback(() => {
+  const flashAlert = useCallback((ms = 1800) => {
     setAlert(true);
-    window.setTimeout(() => setAlert(false), 1600);
+    window.setTimeout(() => setAlert(false), ms);
+  }, []);
+
+  const engageShield = useCallback(() => {
+    if (!blockScreenshots) return;
+    setShielded(true);
+  }, [blockScreenshots]);
+
+  const releaseShield = useCallback(() => {
+    setShielded(false);
   }, []);
 
   useEffect(() => {
@@ -39,42 +51,72 @@ export function ProtectedPhoto({
 
     node.addEventListener("contextmenu", block);
     node.addEventListener("dragstart", block);
+    node.addEventListener("copy", block);
 
-    const onKey = (event: KeyboardEvent) => {
+    const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
       const combo =
         (event.ctrlKey || event.metaKey) &&
         (key === "s" || key === "p" || key === "u" || (event.shiftKey && key === "i"));
+
       if (key === "printscreen" || combo) {
         event.preventDefault();
+        engageShield();
         flashAlert();
       }
     };
 
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        node.classList.add("brightness-50", "blur-sm");
-      } else {
-        node.classList.remove("brightness-50", "blur-sm");
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === "printscreen") {
+        engageShield();
+        flashAlert(2200);
+        // Best-effort: overwrite clipboard so a PrintScreen paste is useless
+        void navigator.clipboard?.writeText?.("Capture bloquée — Gem'StonEye'Shootin'Gallery").catch(() => undefined);
+        window.setTimeout(releaseShield, 2500);
       }
     };
 
-    window.addEventListener("keydown", onKey);
+    const onVisibility = () => {
+      if (!blockScreenshots) return;
+      if (document.visibilityState === "hidden") {
+        engageShield();
+      } else {
+        releaseShield();
+      }
+    };
+
+    const onBlur = () => {
+      if (!blockScreenshots) return;
+      engageShield();
+    };
+
+    const onFocus = () => {
+      if (document.visibilityState === "visible") releaseShield();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       node.removeEventListener("contextmenu", block);
       node.removeEventListener("dragstart", block);
-      window.removeEventListener("keydown", onKey);
+      node.removeEventListener("copy", block);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [flashAlert]);
+  }, [blockScreenshots, engageShield, flashAlert, releaseShield]);
 
   return (
     <div
       ref={frameRef}
       className={cn(
-        "protected-media group relative overflow-hidden bg-aqua-deep/10 transition duration-500",
+        "protected-media group relative overflow-hidden bg-stone-deep/5 transition duration-300",
         className
       )}
     >
@@ -84,28 +126,51 @@ export function ProtectedPhoto({
         fill
         priority={priority}
         sizes="(max-width: 768px) 100vw, 50vw"
-        className="object-cover saturate-[.92] contrast-[1.02]"
+        className={cn(
+          "object-cover transition-[filter,opacity] duration-150",
+          shielded ? "opacity-0" : "opacity-100"
+        )}
+        draggable={false}
       />
-      <div className="photo-filter-overlay absolute inset-0" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.14]">
+
+      {/* Diagonal text watermark only — no color tint */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 overflow-hidden select-none"
+      >
         <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(45deg, rgba(250,248,244,.5) 0 2px, transparent 2px 11px)"
-          }}
-        />
+          className="absolute -left-1/4 -top-1/4 flex h-[150%] w-[150%] flex-wrap content-center gap-x-10 gap-y-16 opacity-[0.18]"
+          style={{ transform: "rotate(-28deg)" }}
+        >
+          {Array.from({ length: 24 }).map((_, i) => (
+            <span
+              key={i}
+              className="whitespace-nowrap text-[13px] font-medium tracking-[0.22em] text-white mix-blend-difference sm:text-sm"
+            >
+              {watermark}
+            </span>
+          ))}
+        </div>
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-aqua-deep/55 to-transparent p-4">
-        <p className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-foam/90">
-          <Shield className="h-3.5 w-3.5" />
-          {watermark}
-        </p>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent px-4 pb-3 pt-10">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-white/90">{watermark}</p>
       </div>
+
+      {shielded ? (
+        <div className="absolute inset-0 z-[5] flex items-center justify-center bg-[#1a2428]">
+          <p className="max-w-xs px-4 text-center font-display text-lg text-foam/90">
+            Capture d&apos;écran bloquée
+            <br />
+            <span className="text-sm text-aqua-mist">Le cliché est masqué pendant la capture.</span>
+          </p>
+        </div>
+      ) : null}
+
       {alert ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-aqua-deep/70 backdrop-blur-md">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#1a2428]/85">
           <p className="max-w-xs px-4 text-center font-display text-xl text-foam">
-            Capture et téléchargement bloqués — fichier master après virement.
+            Capture et téléchargement bloqués — master disponible après paiement.
           </p>
         </div>
       ) : null}

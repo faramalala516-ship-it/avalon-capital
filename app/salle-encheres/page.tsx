@@ -83,7 +83,7 @@ export default function SalleEncheresPage() {
               src={lot.imageUrl}
               alt={lot.title}
               className="aspect-[4/5] w-full"
-              watermark="Salon privé · aperçu filtré"
+              watermark="Salon privé · GSES"
             />
             <div className="space-y-3 p-5">
               {lot.premiere ? (
