@@ -42,27 +42,11 @@ for (const entry of readdirSync(appHtmlDir)) {
 
 const serverSource = `const pages = ${JSON.stringify(pages)};
 
-const compliance = {
-  antiHallucination: "enabled",
-  realtimeDataPolicy: "Aucune donnee temps reel n'est inventee sans source ou outil disponible.",
-  provenancePolicy: "Chaque analyse distingue donnees fournies, contexte Avalon, hypotheses et donnees non fournies.",
-  riskPolicy: "Chaque analyse inclut invalidation, scenario alternatif et condition de non-trade/non-allocation.",
-  financialAdvicePolicy: "Les sorties sont informatives et ne constituent pas un conseil financier personnalise.",
-  fallbackPolicy: "Si OpenAI est indisponible, le site renvoie un cadre local structure avec statut fournisseur explicite."
-};
-
-const signals = [
-  { asset: "XAUUSD", direction: "Long defensif", support: "4 070 / 4 000", resistance: "4 135 / 4 210" },
-  { asset: "Nasdaq 100", direction: "Long selectif", support: "18 940 / 18 620", resistance: "19 420 / 19 850" },
-  { asset: "Bitcoin", direction: "Breakout conditionnel", support: "62 300 / 58 800", resistance: "68 400 / 72 000" }
-];
-
-const agents = [
-  { id: "macro-x", name: "Macro-X Intelligence" },
-  { id: "gem-trading-x", name: "GEM-Trading Intelligence X" },
-  { id: "risk", name: "Risk Management Agent" },
-  { id: "portfolio", name: "Portfolio Allocation Agent" },
-  { id: "sentiment", name: "Market Sentiment Agent" }
+const formats = [
+  { id: "editorial-a4", label: "Editorial A4", priceMultiplier: 1 },
+  { id: "expo-grand", label: "Exposition grand format", priceMultiplier: 1.85 },
+  { id: "tableau-fineart", label: "Tableau Fine Art", priceMultiplier: 2.4 },
+  { id: "livre-double", label: "Double page livre", priceMultiplier: 2.1 }
 ];
 
 function json(data, status = 200) {
@@ -93,235 +77,72 @@ async function parseJson(request) {
   }
 }
 
-function integrations(env = {}) {
-  const openai = Boolean(env.OPENAI_API_KEY);
-  const stripe = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
-  const clerk = Boolean(env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && env.CLERK_SECRET_KEY);
+function conciergeReply(question = "") {
+  return "Concierge Gem'StonEye — gemmologie et photographie.\\n\\nPour « " + question +
+    " » : explorez la collection du mois, choisissez un format licencié, réglez par virement SEPA/SWIFT, puis recevez certificat blockchain et QR. La salle des enchères est réservée aux abonnés Salon Privé.";
+}
 
+function certificate(body) {
+  const issuedAt = new Date().toISOString();
+  const certificateId = "GSES-" + Math.random().toString(16).slice(2, 10).toUpperCase();
+  const txHash = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
   return {
-    openai: {
-      configured: openai,
-      status: openai ? "configured" : "fallback_ready",
-      modelConfigured: Boolean(env.OPENAI_MODEL),
-      fallback: "local_institutional_analysis"
-    },
-    stripe: {
-      configured: stripe,
-      status: stripe ? "configured" : "unconfigured",
-      fallback: "webhook_acknowledgement_only"
-    },
-    clerk: {
-      configured: clerk,
-      status: clerk ? "configured" : "local_public_pages_only",
-      fallback: "auth_pages_show_configuration_notice"
-    }
+    certificateId,
+    photoId: body.photoId,
+    photoTitle: body.photoTitle,
+    ownerEmail: body.ownerEmail,
+    ownerName: body.ownerName,
+    formatId: body.formatId,
+    amountEur: body.amountEur,
+    issuedAt,
+    chain: "GSES-Ledger",
+    txHash,
+    previousHash: "genesis",
+    qrPayload: JSON.stringify({ certificateId, txHash, owner: body.ownerEmail }),
+    verificationUrl: "https://www.gemstoneyeshootingallery.com/certificat/" + certificateId
   };
 }
 
-function buildAnalysis(
-  question = "Analyse XAUUSD",
-  agentId = "gem-trading-x",
-  providerStatus = "openai_not_configured"
-) {
-  const agent = agents.find((item) => item.id === agentId)?.name ?? "Avalon Market AI";
-
-  return {
-    answer: \`\${agent}
-
-## Synthese executive
-XAUUSD reste l'actif prioritaire. Le cadre utilise des niveaux Avalon statiques et ne pretend pas fournir un prix temps reel.
-
-## Donnees et niveaux
-- Donnees utilisees: contexte Avalon statique et demande utilisateur.
-- Support: 4 070 / 4 000.
-- Resistance: 4 135 / 4 210.
-- Demande: \${question}
-
-## Validation institutionnelle
-- Aucune donnee live, flux ETF, COT, carnet, options ou news recente n'est inventee.
-- Les niveaux numeriques sont classes comme contexte Avalon statique.
-- La confiance reste moderee sans verification externe en temps reel.
-
-## Donnees manquantes / hypotheses
-- Donnees non fournies: dernier prix tick-by-tick, volumes, volatilite implicite, calendrier macro exact et news recentes.
-- Hypothese: l'analyse sert de cadre de recherche, pas de signal executable.
-
-## Invalidation et conditions de non-trade
-- Non-trade si le prix est au milieu du range, si le R/R est inferieur a 1:1.5 ou si une publication majeure contredit le scenario.
-- Invalidation sous la zone 4 035 ou sur rupture de coherence dollar/taux reels.
-
-## Note de conformite
-Information educative et analytique uniquement. Aucun conseil financier personnalise, aucune promesse de performance.\`,
-    agent,
-    source: "local-fallback",
-    providerStatus,
-    compliance
-  };
-}
-
-function providerStatusFor(error) {
-  if (error?.status === 401 || error?.status === 403) return "openai_auth_error";
-  if (error?.status === 429) return "openai_rate_limited";
-  return "openai_unavailable";
-}
-
-function responseOutputText(payload) {
-  if (typeof payload?.output_text === "string") return payload.output_text;
-
-  for (const item of payload?.output ?? []) {
-    for (const content of item?.content ?? []) {
-      if (content?.type === "output_text" && typeof content.text === "string") {
-        return content.text;
-      }
-    }
-  }
-
-  return "";
-}
-
-async function runOpenAIAnalysis(question, agentId, env) {
-  const agent = agents.find((item) => item.id === agentId)?.name ?? "Avalon Market AI";
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      authorization: "Bearer " + env.OPENAI_API_KEY,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({
-      model: env.OPENAI_MODEL || "gpt-5.6-luna",
-      input: [
-        {
-          role: "system",
-          content:
-            "Tu es l'analyste institutionnel Avalon Capital. N'invente aucune donnee temps reel. " +
-            "Distingue les donnees fournies, le contexte Avalon, les hypotheses et les donnees manquantes. " +
-            "Inclue validation, invalidation et conditions de non-trade. Reponds en francais."
-        },
-        {
-          role: "user",
-          content: "Agent selectionne: " + agent + "\\nDemande utilisateur: " + question
-        }
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "market_analysis",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            properties: { answer: { type: "string" } },
-            required: ["answer"]
-          }
-        }
-      }
-    })
-  });
-
-  if (!response.ok) {
-    const error = new Error("OpenAI request failed");
-    error.status = response.status;
-    throw error;
-  }
-
-  const payload = await response.json();
-  const outputText = responseOutputText(payload);
-  const parsed = JSON.parse(outputText);
-
-  return {
-    answer: parsed.answer,
-    agent,
-    source: "openai",
-    providerStatus: "openai_live",
-    compliance
-  };
-}
-
-async function handleApi(path, request, env) {
+async function handleApi(path, request, env = {}) {
   if (path === "/api/health" && request.method === "GET") {
-    const status = integrations(env);
     return json({
       status: "ok",
-      service: "avalon-capital",
+      service: "gemstoneyeshootingallery",
+      domain: "www.gemstoneyeshootingallery.com",
       timestamp: new Date().toISOString(),
-      checks: {
-        openai: status.openai.status,
-        stripe: status.stripe.status,
-        clerk: status.clerk.status,
-        antiHallucinationProtocol: "enabled"
-      }
+      openai: Boolean(env.OPENAI_API_KEY) ? "configured" : "fallback_ready"
     });
   }
 
-  if (path === "/api/status" && request.method === "GET") {
-    return json({
-      status: "ok",
-      service: "avalon-capital",
-      timestamp: new Date().toISOString(),
-      apiVersion: "2026-07-13",
-      integrations: integrations(env),
-      compliance
-    });
+  if (path === "/api/gallery" && request.method === "GET") {
+    return json({ formats, payment: { method: "international_bank_transfer" } });
   }
 
-  if (path === "/api/market-ai" && request.method === "GET") {
-    return json({ service: "market-ai", status: integrations(env).openai.status, supportedAgents: agents.map((agent) => agent.id), compliance });
+  if (path === "/api/auctions" && request.method === "GET") {
+    return json({ lots: [], note: "Acces abonnes Salon Prive" });
   }
 
-  if (path === "/api/market-ai" && request.method === "POST") {
+  if (path === "/api/concierge" && request.method === "GET") {
+    return json({ service: "gses-concierge", status: Boolean(env.OPENAI_API_KEY) ? "openai_ready" : "local_fallback" });
+  }
+
+  if (path === "/api/concierge" && request.method === "POST") {
     const body = await parseJson(request);
     const question = typeof body.question === "string" ? body.question.trim() : "";
-
-    if (question.length < 2 || question.length > 1000) {
-      return json({ error: "Question invalide" }, 400);
-    }
-
-    if (!env.OPENAI_API_KEY) {
-      return json(buildAnalysis(question, body.agentId, "openai_not_configured"));
-    }
-
-    try {
-      return json(await runOpenAIAnalysis(question, body.agentId, env));
-    } catch (error) {
-      return json(buildAnalysis(question, body.agentId, providerStatusFor(error)));
-    }
+    if (question.length < 2) return json({ error: "Question invalide" }, 400);
+    return json({ answer: conciergeReply(question), source: "local-fallback", providerStatus: "openai_not_configured" });
   }
 
-  if (path === "/api/agents" && request.method === "GET") {
-    return json({ tools: agents });
-  }
-
-  if (path === "/api/agents" && request.method === "POST") {
+  if (path === "/api/payments/card" && request.method === "POST") {
     const body = await parseJson(request);
-    return json({ agent: "market-intelligence", answer: buildAnalysis(body.prompt).answer, compliance });
+    if (!body.reference || !body.amountEur) return json({ error: "Donnees invalides" }, 400);
+    return json({ ok: true, mode: "demo_authorized", paymentId: "pay_demo", status: "succeeded", brand: body.brand || "visa", last4: body.last4 || "0000", reference: body.reference });
   }
 
-  if (path === "/api/trading/signals" && request.method === "GET") {
-    return json({ signals });
-  }
-
-  if (path === "/api/gemstones" && request.method === "GET") {
-    return json({ gemstones: [{ name: "Diamant bleu fancy vivid", type: "Diamant", allocation: "actif tangible defensif" }] });
-  }
-
-  if (path === "/api/reports" && request.method === "GET") {
-    return json({ reports: [{ title: "Regime macro: croissance lente, liquidite selective", category: "Macro" }] });
-  }
-
-  if (path === "/api/macro/events" && request.method === "GET") {
-    return json({ indicators: [{ label: "Inflation US", value: "verification live requise", tone: "neutral" }] });
-  }
-
-  if (path === "/api/admin/stats" && request.method === "GET") {
-    return json({ users: 1284, activeSubscriptions: 412, monthlyRecurringRevenue: 286700 });
-  }
-
-  if (path === "/api/portfolio/rebalance" && request.method === "POST") {
-    return json({ weights: { equities: 0.34, bonds: 0.18, gold: 0.12, gemstones: 0.08, alternatives: 0.12, cash: 0.16 }, compliance });
-  }
-
-  if (path === "/api/stripe/webhook" && request.method === "POST") {
-    return json({ received: true, mode: integrations(env).stripe.configured ? "configured" : "unconfigured" });
+  if (path === "/api/certificate" && request.method === "POST") {
+    const body = await parseJson(request);
+    if (!body.photoId || !body.ownerEmail) return json({ error: "Donnees invalides" }, 400);
+    return json(certificate(body));
   }
 
   return json({ error: "Not found" }, 404);
@@ -356,4 +177,4 @@ export { fetchHandler as fetch };
 writeFileSync("dist/package.json", `${JSON.stringify({ type: "module" }, null, 2)}\n`);
 writeFileSync("dist/server/index.js", serverSource);
 
-console.log("Prepared dist for Sites static pages and API worker.");
+console.log("Prepared dist for Gem'StonEye'Shootin'Gallery Sites.");
