@@ -2,9 +2,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: avalon
-      POSTGRES_PASSWORD: avalon
-      POSTGRES_DB: avalon
+      POSTGRES_USER: gses
+      POSTGRES_PASSWORD: gses
+      POSTGRES_DB: gses
     ports:
       - "5432:5432"
     volumes:

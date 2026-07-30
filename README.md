@@ -1,29 +1,36 @@
-# Avalon Capital
+# Gem'StonEye'Shootin'Gallery
 
-Avalon Capital est une plateforme web institutionnelle d'analyse financiere assistee par IA: market intelligence, recherche macro, scanner trading, portefeuille intelligent et diversification en pierres precieuses.
+Galerie européenne de photographies de minerais de Madagascar — expositions, foires aux minerais, livres & magazines de gemmologie, tableaux Fine Art pour collectionneurs.
+
+**Domaine :** [www.gemstoneyeshootingallery.com](https://www.gemstoneyeshootingallery.com)
+
+## Pages
+
+1. **Présentation** (`/`) — identité de la galerie et collection du mois
+2. **Galerie shooting** (`/galerie`) — meilleures collections du mois + archives
+3. **Espace personnel** (`/espace`) — inscription e-mail, achats, badges, abonnement
+4. **Salle des enchères** (`/salle-encheres`) — privée, abonnés uniquement
+
+## Fonctionnalités
+
+- Concierge IA (gemmologie + photographie) avec repli local sans clé OpenAI
+- Formats d'image licenciés (éditorial, expo, Fine Art, livre)
+- Protection aperçus (filtre, anti-clic droit, anti-capture basique)
+- Certificat blockchain GSES-Ledger + QR d'appartenance après vente
+- Paiement par virement bancaire international (SEPA / SWIFT)
 
 ## Stack
 
-- Next.js 15, React 19, TypeScript
-- TailwindCSS, Framer Motion, shadcn-style UI primitives, Recharts
-- Next.js API routes, PostgreSQL, Prisma, Redis
-- Clerk, JWT service tokens, Google OAuth via Clerk, Stripe
-- OpenAI Responses API avec Structured Outputs
-- Docker, Vercel-ready, GitHub Actions
-- Hooks React Query dans `hooks/use-avalon-data.ts`
+- Next.js 15, React 19, TypeScript, TailwindCSS, Framer Motion
+- Prisma / PostgreSQL (schéma galerie), Redis optionnel
+- OpenAI Responses API pour le concierge (fallback local)
 
-## Demarrage
+## Démarrage
 
 ```bash
 npm install
 cp .env.example .env
-docker compose up -d postgres redis
-npm run prisma:migrate
 npm run dev
 ```
 
-Sans cle OpenAI, `/api/market-ai` utilise un moteur local deterministe pour que l'application reste executable en developpement.
-
-## Pages
-
-Accueil, Presentation, Tarifs, Connexion, Inscription, Dashboard, Weekly Research, Market Intelligence, Trading Scanner, Macro Dashboard, Portefeuille IA, Calendrier economique, News, Gem Investment, Formation, Profil et Administration.
+Ouvrir [http://localhost:3000](http://localhost:3000).

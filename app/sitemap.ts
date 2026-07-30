@@ -1,16 +1,12 @@
 import type { MetadataRoute } from "next";
-import { navPages } from "@/lib/data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://avalon-capital.vercel.app";
-
+  const base = "https://www.gemstoneyeshootingallery.com";
   return [
-    { url: baseUrl, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
-    ...navPages.map((page) => ({
-      url: `${baseUrl}${page.href}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.8
-    }))
+    { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${base}/galerie`, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${base}/espace`, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/salle-encheres`, changeFrequency: "weekly", priority: 0.6 },
+    { url: `${base}/presentation`, changeFrequency: "monthly", priority: 0.5 }
   ];
 }
