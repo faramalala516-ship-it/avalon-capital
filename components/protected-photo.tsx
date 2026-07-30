@@ -10,6 +10,8 @@ type Props = {
   className?: string;
   priority?: boolean;
   watermark?: string;
+  /** cover = grille ; contain = page détail (qualité intacte, pas de crop) */
+  fit?: "cover" | "contain";
   /** When true (default), blanks the frame on blur / PrintScreen attempts. */
   blockScreenshots?: boolean;
 };
@@ -20,6 +22,7 @@ export function ProtectedPhoto({
   className,
   priority,
   watermark = "Gem'StonEye · aperçu protégé",
+  fit = "cover",
   blockScreenshots = true
 }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -70,7 +73,6 @@ export function ProtectedPhoto({
       if (event.key.toLowerCase() === "printscreen") {
         engageShield();
         flashAlert(2200);
-        // Best-effort: overwrite clipboard so a PrintScreen paste is useless
         void navigator.clipboard?.writeText?.("Capture bloquée — Gem'StonEye'Shootin'Gallery").catch(() => undefined);
         window.setTimeout(releaseShield, 2500);
       }
@@ -78,11 +80,8 @@ export function ProtectedPhoto({
 
     const onVisibility = () => {
       if (!blockScreenshots) return;
-      if (document.visibilityState === "hidden") {
-        engageShield();
-      } else {
-        releaseShield();
-      }
+      if (document.visibilityState === "hidden") engageShield();
+      else releaseShield();
     };
 
     const onBlur = () => {
@@ -116,7 +115,7 @@ export function ProtectedPhoto({
     <div
       ref={frameRef}
       className={cn(
-        "protected-media group relative overflow-hidden bg-stone-deep/5 transition duration-300",
+        "protected-media group relative overflow-hidden bg-[#e8eeec] transition duration-300",
         className
       )}
     >
@@ -125,27 +124,26 @@ export function ProtectedPhoto({
         alt={alt}
         fill
         priority={priority}
-        sizes="(max-width: 768px) 100vw, 50vw"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 900px"
         className={cn(
-          "object-cover transition-[filter,opacity] duration-150",
+          fit === "contain" ? "object-contain" : "object-cover",
+          "transition-[filter,opacity] duration-150",
           shielded ? "opacity-0" : "opacity-100"
         )}
         draggable={false}
+        quality={100}
       />
 
-      {/* Diagonal text watermark only — no color tint */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 overflow-hidden select-none"
-      >
+      {/* Light watermark — does not tint gem colors */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden select-none">
         <div
-          className="absolute -left-1/4 -top-1/4 flex h-[150%] w-[150%] flex-wrap content-center gap-x-10 gap-y-16 opacity-[0.18]"
+          className="absolute -left-1/4 -top-1/4 flex h-[150%] w-[150%] flex-wrap content-center gap-x-12 gap-y-20 opacity-[0.11]"
           style={{ transform: "rotate(-28deg)" }}
         >
-          {Array.from({ length: 24 }).map((_, i) => (
+          {Array.from({ length: 18 }).map((_, i) => (
             <span
               key={i}
-              className="whitespace-nowrap text-[13px] font-medium tracking-[0.22em] text-white mix-blend-difference sm:text-sm"
+              className="whitespace-nowrap text-[12px] font-medium tracking-[0.24em] text-white mix-blend-difference sm:text-[13px]"
             >
               {watermark}
             </span>
@@ -153,8 +151,8 @@ export function ProtectedPhoto({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent px-4 pb-3 pt-10">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-white/90">{watermark}</p>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/35 via-transparent to-transparent px-4 pb-3 pt-12">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-white/85">{watermark}</p>
       </div>
 
       {shielded ? (

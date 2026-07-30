@@ -18,6 +18,7 @@ export default function HomePage() {
             src={hero.imageUrl}
             alt={hero.title}
             priority
+            fit="cover"
             className="h-full min-h-[calc(100vh-4.5rem)] w-full"
             watermark="Gem'StonEye · shooting Madagascar"
           />

@@ -29,7 +29,8 @@ export default async function PhotoDetailPage({ params }: Props) {
             src={photo.imageUrl}
             alt={photo.title}
             priority
-            className="aspect-[4/5] w-full"
+            fit="contain"
+            className="min-h-[28rem] w-full bg-[#e8eeec] sm:min-h-[36rem] lg:min-h-[42rem]"
           />
           <RegisteredPreview photo={photo} />
         </div>

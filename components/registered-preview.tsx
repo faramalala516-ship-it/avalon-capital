@@ -85,7 +85,8 @@ export function RegisteredPreview({ photo }: { photo: GalleryPhoto }) {
             <ProtectedPhoto
               src={photo.imageUrl}
               alt={photo.title}
-              className="aspect-[4/5] w-full max-h-[70vh]"
+              className="max-h-[70vh] min-h-[24rem] w-full"
+              fit="contain"
               watermark="Aperçu membre · GSES · non commercial"
             />
             <p className="mt-3 text-xs leading-5 text-stone">
