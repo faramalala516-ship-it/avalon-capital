@@ -15,7 +15,7 @@ Galerie européenne de photographies de minerais de Madagascar — expositions, 
 
 - Concierge IA (gemmologie + photographie) avec repli local sans clé OpenAI
 - Formats d'image licenciés (éditorial, expo, Fine Art, livre)
-- Protection aperçus (filtre, anti-clic droit, anti-capture basique)
+- Protection aperçus (filigrane, anti-clic droit, anti-capture d'écran)
 - Certificat blockchain GSES-Ledger + QR d'appartenance après vente
 - Paiement par virement bancaire international (SEPA / SWIFT)
 
