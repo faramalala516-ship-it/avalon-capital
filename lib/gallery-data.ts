@@ -65,7 +65,7 @@ export const IMAGE_FORMATS: ImageFormat[] = [
     description: "Fichier master pour foires, vitrines et stands muséographiques.",
     resolution: "300 dpi · 6000×4000",
     license: "Licence exposition (1 an)",
-    priceMultiplier: 1.85
+    priceMultiplier: 1.3
   },
   {
     id: "tableau-fineart",
@@ -73,7 +73,7 @@ export const IMAGE_FORMATS: ImageFormat[] = [
     description: "Master pour impression pigmentaire sur papier coton ou dibond.",
     resolution: "300 dpi · 8000×5333",
     license: "Licence privée collectionneur",
-    priceMultiplier: 2.4
+    priceMultiplier: 1.55
   },
   {
     id: "livre-double",
@@ -81,7 +81,7 @@ export const IMAGE_FORMATS: ImageFormat[] = [
     description: "Composition prête pour ouvrages de gemmologie et monographies.",
     resolution: "300 dpi · 7000×5000",
     license: "Licence ouvrage imprimé",
-    priceMultiplier: 2.1
+    priceMultiplier: 1.4
   }
 ];
 
@@ -127,68 +127,72 @@ export const collections: MonthlyCollection[] = [
     id: "2026-07",
     monthKey: "2026-07",
     label: "Juillet 2026",
-    theme: "Lueurs d'Ilakaka",
-    intro:
-      "Une sélection nocturne et aquatique des quartz et saphirs d'Ilakaka — lumière rasante, eau minérale et or nacré.",
+    theme: "Prismes Indicolite",
+    intro: "Meilleures prises du mois : tourmaline indicolite et mica lépidolite — clichés solo premium, cadrage stratégique et netteté renforcée.",
     photos: [
       {
-        id: "p-tourmaline-rose",
-        slug: "tourmaline-rose-sahatany",
-        title: "Tourmaline rose de Sahatany",
-        mineral: "Tourmaline (elbaïte)",
-        locality: "Sahatany, Madagascar",
-        description:
-          "Cristal prismatique baigné d'un halo nacré. La photographie capture la transition rose–incolore sous polarisation douce, idéale pour catalogue de foire ou tableau d'apparat.",
-        technicalNote: "Macro 100 mm · lumière continuum LED · fond aqua pierreux",
-        priceEur: 480,
-        imageUrl:
-          "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=1600&q=80",
+        id: "indicolite-prisme-mica",
+        slug: "indicolite-prisme-mica",
+        title: "Prisme indicolite & mica nacrée",
+        mineral: "Tourmaline indicolite · Lépidolite",
+        locality: "Madagascar",
+        description: "Prismes teal translucides couronnés d’une plaquette de mica nacrée. Lumière rasante, idéale pour catalogue de foire ou tableau Fine Art.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 24,
+        imageUrl: "/gallery/indicolite-prisme-mica.jpg",
         featured: true,
         formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
       },
       {
-        id: "p-saphir-bleu",
-        slug: "saphir-bleu-ilakaka",
-        title: "Saphir bleu d'Ilakaka",
-        mineral: "Corindon (saphir)",
-        locality: "Ilakaka, Madagascar",
-        description:
-          "Cabochon et cristal brut confrontés dans un bassin minéral. Reflets aquatiques, grain pierreux et or doux pour magazines de gemmologie.",
-        technicalNote: "Focus stacking · diffusion nacrée · polariseur circulaire",
-        priceEur: 620,
-        imageUrl:
-          "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1600&q=80",
+        id: "indicolite-terminaison",
+        slug: "indicolite-terminaison",
+        title: "Terminaison hexagonale indicolite",
+        mineral: "Tourmaline indicolite",
+        locality: "Madagascar",
+        description: "Cristal vertical à terminaison hexagonale nette, reflets aquatiques et base micacée. Cliché solo premium.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 22,
+        imageUrl: "/gallery/indicolite-terminaison.jpg",
         featured: true,
-        formats: ["editorial-a4", "expo-grand", "tableau-fineart"]
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
       },
       {
-        id: "p-quartz-fume",
-        slug: "quartz-fume-antanety",
-        title: "Quartz fumé d'Antanety",
-        mineral: "Quartz fumé",
-        locality: "Antanety, Madagascar",
-        description:
-          "Prisme monumental photographié comme une architecture liquide. Contraste or/teal pour mise en scène d'exposition.",
-        technicalNote: "Grand angle contrôlé · lumière directionnelle basse",
-        priceEur: 390,
-        imageUrl:
-          "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=1600&q=80",
+        id: "indicolite-zonee",
+        slug: "indicolite-zonee",
+        title: "Tourmaline zonée indigo",
+        mineral: "Tourmaline indicolite",
+        locality: "Madagascar",
+        description: "Prisme solo zoné indigo–vert sur gangue blanche. Contraste fort, composition épurée pour couverture ou expo.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 25,
+        imageUrl: "/gallery/indicolite-zonee.jpg",
+        featured: true,
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "indicolite-faisceau",
+        slug: "indicolite-faisceau",
+        title: "Faisceau de prismes teal",
+        mineral: "Tourmaline indicolite · Silice",
+        locality: "Madagascar",
+        description: "Faisceau de prismes indicolite accompagné d’un cristal tabulaire clair. Cadre resserré sur la géométrie.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 20,
+        imageUrl: "/gallery/indicolite-faisceau.jpg",
         featured: false,
-        formats: ["editorial-a4", "tableau-fineart", "livre-double"]
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
       },
       {
-        id: "p-labradorite",
-        slug: "labradorite-iridescente",
-        title: "Labradorite iridescente",
-        mineral: "Labradorite",
-        locality: "Hauts Plateaux, Madagascar",
-        description:
-          "Schiller bleu-vert saisi au moment où la nacre optique croise l'or. Cliché prêt pour couverture de revue.",
-        technicalNote: "Angle Specular · ISO bas · trépied studio",
-        priceEur: 540,
-        imageUrl:
-          "https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?auto=format&fit=crop&w=1600&q=80",
-        featured: true,
+        id: "indicolite-cluster-profond",
+        slug: "indicolite-cluster-profond",
+        title: "Cluster indicolite profond",
+        mineral: "Tourmaline indicolite · Amazonite",
+        locality: "Madagascar",
+        description: "Amas dense bleu-vert sur gangue d’amazonite. Lecture gemmologique des inclusions et du lustre.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 18,
+        imageUrl: "/gallery/indicolite-cluster-profond.jpg",
+        featured: false,
         formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
       }
     ]
@@ -196,94 +200,122 @@ export const collections: MonthlyCollection[] = [
   {
     id: "2026-06",
     monthKey: "2026-06",
-    label: "Juin 2026",
-    theme: "Émeraudes & eaux profondes",
-    intro:
-      "Archives de juin : béryls verts et inclusions aquatiques — une lecture gemmologique de la lumière sous-marine.",
+    label: "Juin 2026 · archive",
+    theme: "Chromite sur amazonite",
+    intro: "Collection d’associations : aiguilles et prismes sur gangue d’amazonite, felspath alcalin, silice et muscovite — beauté pierreuse, tarifs collection.",
     photos: [
       {
-        id: "p-emeraude",
-        slug: "emeraude-mananjary",
-        title: "Émeraude de Mananjary",
-        mineral: "Béryl (émeraude)",
-        locality: "Mananjary, Madagascar",
-        description:
-          "Cristal terminé sur gangue, photographié dans un bain de lumière aquatique. Destiné aux ouvrages scientifiques et aux stands de foire.",
-        technicalNote: "Macro empilée · balance nacrée calibrée",
-        priceEur: 710,
-        imageUrl:
-          "https://images.unsplash.com/photo-1596944924616-7b38e7cfac86?auto=format&fit=crop&w=1600&q=80",
-        featured: true,
-        formats: ["editorial-a4", "expo-grand", "livre-double"]
-      },
-      {
-        id: "p-amethyste",
-        slug: "amethyste-geode",
-        title: "Géode d'améthyste",
-        mineral: "Quartz améthyste",
-        locality: "Sud malgache",
-        description:
-          "Cavité cristalline traitée comme une architecture sacrée. Format tableau recommandé pour collectionneurs.",
-        technicalNote: "Éclairage fibre · ombre pierreuse contrôlée",
-        priceEur: 450,
-        imageUrl:
-          "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=1600&q=80",
-        featured: false,
-        formats: ["tableau-fineart", "expo-grand"]
-      },
-      {
-        id: "p-citrine",
-        slug: "citrine-miel",
-        title: "Citrine miel",
-        mineral: "Quartz citrine",
+        id: "aiguilles-amazonite",
+        slug: "aiguilles-amazonite",
+        title: "Aiguilles sur amazonite",
+        mineral: "Tourmaline · Amazonite · Chromite",
         locality: "Madagascar",
-        description:
-          "Teinte or nacré pure — le cliché dialogue avec le style de la galerie. Parfait pour magazines lifestyle gemmologie.",
-        technicalNote: "Fond dégradé aqua-or · netteté optique",
-        priceEur: 360,
-        imageUrl:
-          "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?auto=format&fit=crop&w=1600&q=80",
+        description: "Aiguilles bleutées dans une gangue feldspathique blanche parsemée de grains de chromite.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 16,
+        imageUrl: "/gallery/aiguilles-amazonite.jpg",
+        featured: true,
+        formats: ["editorial-a4", "tableau-fineart", "expo-grand"]
+      },
+      {
+        id: "prismes-matrice-claire",
+        slug: "prismes-matrice-claire",
+        title: "Prismes dans matrice claire",
+        mineral: "Tourmaline · Felspath alcalin · Muscovite",
+        locality: "Madagascar",
+        description: "Contraste pierreux noir/blanc : prismes sombres dans silice et muscovite.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 14,
+        imageUrl: "/gallery/prismes-matrice-claire.jpg",
         featured: false,
-        formats: ["editorial-a4", "tableau-fineart"]
+        formats: ["editorial-a4", "tableau-fineart", "expo-grand"]
+      },
+      {
+        id: "nid-tourmaline-blanche",
+        slug: "nid-tourmaline-blanche",
+        title: "Nid de tourmaline blanche",
+        mineral: "Tourmaline · Amazonite · Chromite",
+        locality: "Madagascar",
+        description: "Crevasse cristalline — nid de prismes dans amazonite claire, accents de chromite.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 13,
+        imageUrl: "/gallery/nid-tourmaline-blanche.jpg",
+        featured: false,
+        formats: ["editorial-a4", "tableau-fineart", "expo-grand"]
+      },
+      {
+        id: "crevasse-amazonite",
+        slug: "crevasse-amazonite",
+        title: "Crevasse d'amazonite",
+        mineral: "Tourmaline · Amazonite · Silice",
+        locality: "Madagascar",
+        description: "Aiguilles sombres logées dans une faille de gangue claire. Texture stony pure.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 12,
+        imageUrl: "/gallery/crevasse-amazonite.jpg",
+        featured: false,
+        formats: ["editorial-a4", "tableau-fineart", "expo-grand"]
+      },
+      {
+        id: "lepidolite-rose-mica",
+        slug: "lepidolite-rose-mica",
+        title: "Rose de mica & lépidolite",
+        mineral: "Lépidolite · Muscovite · Tourmaline",
+        locality: "Madagascar",
+        description: "Agrégats nacrés de mica lépidolite avec prismes tourmaline et grains sombres.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 15,
+        imageUrl: "/gallery/lepidolite-rose-mica.jpg",
+        featured: false,
+        formats: ["editorial-a4", "tableau-fineart", "expo-grand"]
       }
     ]
   },
   {
     id: "2026-05",
     monthKey: "2026-05",
-    label: "Mai 2026",
-    theme: "Grenats du sud",
-    intro: "Archives de mai : grenats pyrope-almandin et lumière minérale chaude sur textures pierreuses.",
+    label: "Mai 2026 · archive",
+    theme: "Silice & associations",
+    intro: "Pointes de silice, cristaux à inclusions et aiguilles teal — petites collections d’associations minérales prêtes à l’édition.",
     photos: [
       {
-        id: "p-grenat",
-        slug: "grenat-pyrope",
-        title: "Grenat pyrope",
-        mineral: "Grenat pyrope",
-        locality: "Sud de Madagascar",
-        description:
-          "Rouge profond sous voile aquatique. Composition sobre pour catalogues de foire aux minerais.",
-        technicalNote: "Boîte à lumière · fond stone grain",
-        priceEur: 410,
-        imageUrl:
-          "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?auto=format&fit=crop&w=1600&q=80",
+        id: "pointe-silice-tourmaline",
+        slug: "pointe-silice-tourmaline",
+        title: "Pointe de silice & tourmaline",
+        mineral: "Quartz · Tourmaline indicolite · Chromite",
+        locality: "Madagascar",
+        description: "Pointe hexagonale de silice sur lit d’aiguilles indicolite. Association complète.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 21,
+        imageUrl: "/gallery/pointe-silice-tourmaline.jpg",
         featured: true,
-        formats: ["editorial-a4", "expo-grand", "tableau-fineart"]
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
       },
       {
-        id: "p-morganite",
-        slug: "morganite-pastel",
-        title: "Morganite pastel",
-        mineral: "Béryl (morganite)",
-        locality: "Pegmatites malgaches",
-        description:
-          "Rose nacré photographié comme une perle minérale. Tirage Fine Art recommandé.",
-        technicalNote: "Softbox double · polarisation partielle",
-        priceEur: 580,
-        imageUrl:
-          "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=1600&q=80",
+        id: "cristal-inclusions",
+        slug: "cristal-inclusions",
+        title: "Cristal à inclusions",
+        mineral: "Quartz · Tourmaline · Mica",
+        locality: "Madagascar",
+        description: "Cristal transparent à inclusions, aiguilles teal et mica sur gangue alcaline.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 19,
+        imageUrl: "/gallery/cristal-inclusions.jpg",
         featured: false,
-        formats: ["tableau-fineart", "livre-double"]
+        formats: ["editorial-a4", "expo-grand", "tableau-fineart", "livre-double"]
+      },
+      {
+        id: "silice-aiguilles-teal",
+        slug: "silice-aiguilles-teal",
+        title: "Silice & aiguilles teal",
+        mineral: "Quartz · Tourmaline indicolite",
+        locality: "Madagascar",
+        description: "Silice claire et aiguilles teal — association aquatique, rendu pierreux.",
+        technicalNote: "Macro · rognage stratégique · netteté & contraste · fond nacré aquatique",
+        priceEur: 17,
+        imageUrl: "/gallery/silice-aiguilles-teal.jpg",
+        featured: false,
+        formats: ["editorial-a4", "tableau-fineart", "expo-grand"]
       }
     ]
   }
@@ -292,41 +324,38 @@ export const collections: MonthlyCollection[] = [
 export const auctionLots: AuctionLot[] = [
   {
     id: "lot-01",
-    photoId: "p-premiere-spinelle",
-    title: "Spinelle rouge — avant-première",
-    mineral: "Spinelle",
-    imageUrl:
-      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1400&q=80",
-    startingBid: 900,
-    currentBid: 1240,
+    photoId: "indicolite-prisme-mica",
+    title: "Prisme indicolite & mica nacrée — avant-première",
+    mineral: "Tourmaline indicolite · Lépidolite",
+    imageUrl: "/gallery/indicolite-prisme-mica.jpg",
+    startingBid: 18,
+    currentBid: 24,
     endsAt: "2026-08-15T20:00:00.000Z",
     premiere: true,
     bids: 7
   },
   {
     id: "lot-02",
-    photoId: "p-premiere-alexandrite",
-    title: "Alexandrite changeante — salon privé",
-    mineral: "Chrysobéryl",
-    imageUrl:
-      "https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?auto=format&fit=crop&w=1400&q=80",
-    startingBid: 1200,
-    currentBid: 1580,
+    photoId: "indicolite-terminaison",
+    title: "Terminaison hexagonale indicolite — avant-première",
+    mineral: "Tourmaline indicolite",
+    imageUrl: "/gallery/indicolite-terminaison.jpg",
+    startingBid: 16,
+    currentBid: 22,
     endsAt: "2026-08-15T20:00:00.000Z",
     premiere: true,
-    bids: 11
+    bids: 5
   },
   {
     id: "lot-03",
-    photoId: "p-premiere-pegmatite",
-    title: "Pegmatite monumentale — cliché exclusif",
-    mineral: "Pegmatite à tourmaline",
-    imageUrl:
-      "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=1400&q=80",
-    startingBid: 750,
-    currentBid: 890,
+    photoId: "indicolite-zonee",
+    title: "Tourmaline zonée indigo — avant-première",
+    mineral: "Tourmaline indicolite",
+    imageUrl: "/gallery/indicolite-zonee.jpg",
+    startingBid: 15,
+    currentBid: 19,
     endsAt: "2026-08-15T20:00:00.000Z",
-    premiere: false,
+    premiere: true,
     bids: 4
   }
 ];

@@ -33,8 +33,8 @@ export default function HomePage() {
             <span className="nacre-text">Gem&apos;StonEye&apos;Shootin&apos;Gallery</span>
           </h1>
           <p className="mt-6 max-w-xl animate-fadeRise text-lg leading-8 text-stone-deep" style={{ animationDelay: ".12s" }}>
-            Photographies minérales pour expositions, foires, livres &amp; magazines de gemmologie — et pour
-            les collectionneurs qui souhaitent de beaux tableaux.
+            Indicolite, lépidolite, chromite &amp; amazonite de Madagascar — photographies pour expositions,
+            foires, livres de gemmologie et tableaux Fine Art.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 animate-fadeRise" style={{ animationDelay: ".22s" }}>
             <Button asChild size="lg">

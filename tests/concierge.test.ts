@@ -30,6 +30,6 @@ describe("blockchain certificate", () => {
 
 describe("pricing", () => {
   it("applique le multiplicateur Fine Art", () => {
-    expect(priceForFormat(100, "tableau-fineart")).toBe(240);
+    expect(priceForFormat(100, "tableau-fineart")).toBe(155);
   });
 });

@@ -1,16 +1,16 @@
 const knowledge = {
   minerals: [
     "tourmaline",
-    "saphir",
-    "émeraude",
-    "quartz",
-    "labradorite",
-    "grenat",
-    "morganite",
-    "améthyste",
-    "citrine",
-    "spinelle",
-    "alexandrite"
+    "indicolite",
+    "lépidolite",
+    "lepidolite",
+    "mica",
+    "chromite",
+    "amazonite",
+    "felspath",
+    "muscovite",
+    "silice",
+    "quartz"
   ],
   photo: [
     "macro",
@@ -59,7 +59,7 @@ export function buildConciergeReply(question: string) {
     mineral: `Pour « ${question.trim()} » : observez la couleur, le lustre et les inclusions. Dans la galerie, les meilleures collections du mois mettent en avant des spécimens photographiés prêts à la vente — description, prix et formats sous chaque cliché. Demandez-moi un mineral précis pour une recommandation de format (éditorial, expo, tableau).`,
     photo: `Concernant « ${question.trim()} » : nos masters sont calibrés 300 dpi. Choisissez Éditorial A4 pour magazines, Exposition grand format pour foires, Tableau Fine Art pour impression pigmentaire, Double page livre pour monographies. Les aperçus web portent un filtre anti-capture ; le fichier master n'est délivré qu'après virement confirmé.`,
     commerce: `Au sujet de « ${question.trim()} » : paiement par virement SEPA/SWIFT compte à compte. Après crédit, génération du certificat GSES-Ledger (empreinte SHA-256) et QR d'appartenance. L'abonnement Salon Privé (49 €/mois) ouvre la salle des enchères et les avant-premières mensuelles. Les badges récompensent vos acquisitions.`,
-    origin: `À propos de « ${question.trim()} » : Madagascar offre une diversité exceptionnelle — saphirs d'Ilakaka, tourmalines de Sahatany, émeraudes de Mananjary. Nos shootings valorisent cette géologie sous une esthétique or nacrée, pierreuse et aquatique.`,
+    origin: `À propos de « ${question.trim()} » : la collection actuelle met en lumière des prismes de tourmaline indicolite accompagnés de mica lépidolite, ainsi que de la chromite sur gangue d'amazonite (felspath alcalin) avec silice et muscovite — spécimens de Madagascar, photographiés en macro.`,
     reach: `Pour « ${question.trim()} » : le site est conçu pour l'Europe et au-delà. Le concierge guide chaque visiteur vers la collection du mois, les archives, l'espace personnel et — pour les abonnés — la salle privée. Aucun téléchargement libre : protection d'écran, filtre sur les aperçus, et traçabilité blockchain à la vente.`,
     general: `Vous avez demandé : « ${question.trim()} ». Je peux vous orienter vers la collection du mois, expliquer un mineral, conseiller un format d'image, détailler le virement international, ou préparer votre entrée au Salon Privé. Que souhaitez-vous explorer ?`
   };
