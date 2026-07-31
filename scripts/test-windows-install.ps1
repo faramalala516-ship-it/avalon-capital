@@ -32,7 +32,8 @@ function Find-AvalonUninstallEntry {
 function Resolve-InstalledExecutable($entry) {
   $candidates = @()
   if ($entry.InstallLocation) {
-    $candidates += Get-ChildItem $entry.InstallLocation -Recurse -File -Filter "*.exe" -ErrorAction SilentlyContinue
+    $candidates += Get-ChildItem $entry.InstallLocation -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue |
+      Where-Object { -not $_.PSIsContainer }
   }
   if ($entry.DisplayIcon) {
     $iconPath = ($entry.DisplayIcon -replace '",\d+$', '"' -replace '^"|"$', "")
@@ -63,12 +64,17 @@ $installerHash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
 Write-Host "Testing $PackageType installer: $installer"
 Write-Host "SHA256: $installerHash"
 
-if ($PackageType -eq "nsis") {
-  $install = Start-Process -FilePath $installer -ArgumentList "/S" -Wait -PassThru
-} else {
-  $install = Start-Process -FilePath "msiexec.exe" `
-    -ArgumentList "/i", "`"$installer`"", "/qn", "/norestart" `
-    -Wait -PassThru
+try {
+  if ($PackageType -eq "nsis") {
+    $install = Start-Process -FilePath $installer -ArgumentList "/S" -Wait -PassThru
+  } else {
+    $install = Start-Process -FilePath "msiexec.exe" `
+      -ArgumentList "/i", "`"$installer`"", "/qn", "/norestart" `
+      -Wait -PassThru
+  }
+} catch {
+  Write-Error ($_ | Format-List * -Force | Out-String)
+  throw
 }
 if ($install.ExitCode -ne 0) {
   throw "$PackageType installer exited $($install.ExitCode)"

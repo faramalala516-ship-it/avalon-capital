@@ -37,6 +37,7 @@ pub struct SecureVault {
 impl SecureVault {
     pub fn open(path: impl AsRef<Path>, key_ring: Arc<KeyRing>) -> AvalonResult<Self> {
         let path = path.as_ref().to_path_buf();
+        let needs_initialization = !path.exists();
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
                 .map_err(|e| AvalonError::Internal(format!("vault dir: {e}")))?;
@@ -47,6 +48,12 @@ impl SecureVault {
             index: RwLock::new(HashMap::new()),
         };
         vault.load()?;
+        // Materialize an authenticated empty vault on first run. A successful
+        // bootstrap must never leave an ambiguous "vault key exists but vault
+        // file does not" state.
+        if needs_initialization {
+            vault.persist()?;
+        }
         Ok(vault)
     }
 
@@ -203,5 +210,20 @@ mod tests {
         let listed = vault.list_meta();
         assert_eq!(listed.len(), 1);
         assert!(listed[0].configured);
+    }
+
+    #[test]
+    fn first_open_materializes_encrypted_empty_vault() {
+        let dir = tempdir().unwrap();
+        let provider = Arc::new(DevFileRootKeyProvider::new(dir.path()).unwrap());
+        let ring = Arc::new(KeyRing::open_or_create(provider, dir.path()).unwrap());
+        let path = dir.path().join("vault.bin");
+        let vault = SecureVault::open(&path, ring).unwrap();
+
+        assert!(vault.is_unlocked());
+        assert!(path.exists());
+        let disk = std::fs::read(path).unwrap();
+        assert!(!disk.is_empty());
+        assert!(!String::from_utf8_lossy(&disk).contains("secret"));
     }
 }
