@@ -52,7 +52,9 @@ The uninstaller removes Program Files binaries and shortcuts.
 
 ## Code signing
 
-V1 artifacts may be unsigned (`manifest.signed=false`). Production releases must use Avalon Capital’s Authenticode certificate. Do not invent or commit certificates.
+CI signs Windows artifacts automatically when Avalon Capital Authenticode secrets are configured; otherwise packages ship unsigned (`manifest.signed=false`, `channel=DEV`).
+
+Production releases must be signed. See `docs/CODE_SIGNING.md`. Do not invent or commit certificates.
 
 ## Acceptance (Install) — verified
 

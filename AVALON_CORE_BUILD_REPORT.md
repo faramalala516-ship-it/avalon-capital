@@ -108,7 +108,7 @@ NSIS + MSI **successfully produced by CI** on `windows-latest` (Tauri):
 
 Staging fixed to read Cargo **workspace** `target/release/bundle` (not `src-tauri/target`).  
 Workflow: `.github/workflows/avalon-platform-core.yml`. Artifacts: `avalon-windows-installers`.  
-V1 unsigned (`signed: false`). WebView2 bootstrap documented.
+Authenticode pipeline is **secrets-gated** (`scripts/sign-windows.ps1`): signs when Avalon Capital PFX secrets exist; skips cleanly otherwise (`signed: false` / `channel: DEV`). Never fabricates certificates. See `docs/CODE_SIGNING.md`. WebView2 bootstrap documented.
 
 ## FILES CREATED
 
@@ -135,7 +135,7 @@ Platform monorepo trees, docs (`EXISTING_ARCHITECTURE_AUDIT`, `TARGET_ARCHITECTU
 
 ## REMAINING TASKS
 
-- Authenticode signing pipeline with real Avalon Capital certificate (not fabricated).
+- Operators: load Avalon Capital Authenticode PFX into GitHub secrets (pipeline ready; unsigned until secrets present).
 - Optional SQLCipher feature flag when OpenSSL/sqlcipher vendoring validated.
 - Expand Excel COM path + DuckDB enablement.
 

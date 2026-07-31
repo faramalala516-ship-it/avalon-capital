@@ -22,7 +22,12 @@ Trigger: changes under Core/desktop/agents/packages/scripts/installer, or `workf
 
 ## Signing
 
-Artifacts are **unsigned** in V1 CI (`signed: false`). Attach Authenticode in a future secrets-backed job — never commit private keys or fake certs.
+Authenticode is **secrets-gated** via `scripts/sign-windows.ps1`:
+
+- Secrets present (`AVALON_WINDOWS_CODESIGN_PFX_BASE64` + `AVALON_WINDOWS_CODESIGN_PFX_PASSWORD`) → sign EXE/MSI, verify, set `manifest.signed=true` / `channel=SIGNED`
+- Secrets absent → skip cleanly, `manifest.signed=false` / `channel=DEV`, CI stays green
+
+Never invent certificates. Operator setup: `docs/CODE_SIGNING.md`.
 
 ## Offline WebView2
 

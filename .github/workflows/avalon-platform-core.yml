@@ -11,6 +11,8 @@ on:
       - "packages/**"
       - "scripts/**"
       - "installer/**"
+      - "docs/CODE_SIGNING.md"
+      - "docs/WINDOWS_CI_PACKAGING.md"
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/avalon-platform-core.yml"
@@ -23,6 +25,8 @@ on:
       - "packages/**"
       - "scripts/**"
       - "installer/**"
+      - "docs/CODE_SIGNING.md"
+      - "docs/WINDOWS_CI_PACKAGING.md"
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/avalon-platform-core.yml"
@@ -142,7 +146,7 @@ jobs:
         run: |
           npm exec -- tauri build --ci
         env:
-          # Unsigned V1 — do not invent certificates
+          # Tauri updater key is separate from Authenticode; leave unset unless operators configure it.
           TAURI_SIGNING_PRIVATE_KEY: ""
 
       - name: Stage release directory
@@ -193,23 +197,58 @@ jobs:
             Write-Warning "MSI not found in release/ after staging"
           }
 
+          Get-ChildItem release -Recurse | Select-Object FullName, Length
+
+      - name: Authenticode sign (secrets-gated)
+        shell: pwsh
+        env:
+          AVALON_WINDOWS_CODESIGN_PFX_BASE64: ${{ secrets.AVALON_WINDOWS_CODESIGN_PFX_BASE64 }}
+          AVALON_WINDOWS_CODESIGN_PFX_PASSWORD: ${{ secrets.AVALON_WINDOWS_CODESIGN_PFX_PASSWORD }}
+          AVALON_WINDOWS_CODESIGN_TIMESTAMP_URL: ${{ vars.AVALON_WINDOWS_CODESIGN_TIMESTAMP_URL }}
+          AVALON_WINDOWS_CODESIGN_SUBJECT: ${{ vars.AVALON_WINDOWS_CODESIGN_SUBJECT }}
+        run: |
+          ./scripts/sign-windows.ps1 -ReleaseDir release
+          $statusFile = "release/signing/status.txt"
+          if (Test-Path $statusFile) {
+            $status = (Get-Content $statusFile -Raw).Trim()
+            Write-Host "Signing status: $status"
+            if ($status -eq "SIGNED") {
+              ./scripts/sign-windows.ps1 -ReleaseDir release -VerifyOnly
+            }
+          } else {
+            Write-Host "Signing status: SKIP (no status marker)"
+          }
+
+      - name: Finalize manifest and checksums
+        shell: pwsh
+        run: |
+          $signed = $false
+          $statusFile = "release/signing/status.txt"
+          if ((Test-Path $statusFile) -and ((Get-Content $statusFile -Raw).Trim() -eq "SIGNED")) {
+            $signed = $true
+          }
+
           Set-Content -Path release/version.txt -Value "0.1.0" -NoNewline
+          $channel = if ($signed) { "SIGNED" } else { "DEV" }
           $manifest = @{
             product = "Avalon Agentique Platform"
             version = "0.1.0"
             build = $env:GITHUB_SHA
-            channel = "DEV"
-            signed = $false
+            channel = $channel
+            signed = $signed
+            signing = if ($signed) { "authenticode" } else { "unsigned" }
             webview2 = "evergreen-bootstrap-or-system"
             artifacts = @(Get-ChildItem release -File | ForEach-Object { $_.Name })
           } | ConvertTo-Json
           Set-Content -Path release/manifest.json -Value $manifest
 
+          New-Item -ItemType Directory -Force release/checksums | Out-Null
           if (Test-Path release/checksums/SHA256SUMS) { Remove-Item release/checksums/SHA256SUMS }
           Get-ChildItem release -File | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
             Add-Content release/checksums/SHA256SUMS "$hash  $($_.Name)"
           }
+          Write-Host "manifest.signed=$signed channel=$channel"
           Get-ChildItem release -Recurse | Select-Object FullName, Length
 
       - name: Upload Windows release artifacts
@@ -250,6 +289,17 @@ jobs:
             if ($actual -ne $expected) { throw "SHA256 mismatch: $file" }
           }
           Write-Host "All release checksums verified"
+
+      - name: Verify Authenticode when manifest.signed
+        shell: pwsh
+        run: |
+          $manifest = Get-Content release/manifest.json -Raw | ConvertFrom-Json
+          if ($manifest.signed -eq $true) {
+            Write-Host "manifest.signed=true — enforcing Authenticode verification"
+            ./scripts/sign-windows.ps1 -ReleaseDir release -VerifyOnly
+          } else {
+            Write-Host "manifest.signed=false — Authenticode not required for this DEV build"
+          }
 
       - name: Install, launch, initialize vault, and uninstall
         shell: pwsh

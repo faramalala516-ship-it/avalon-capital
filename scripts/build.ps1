@@ -4,7 +4,9 @@ param(
   [switch]$Test,
   [switch]$Release,
   [switch]$Installer,
-  [switch]$SkipWebViewBootstrap
+  [switch]$SkipWebViewBootstrap,
+  [switch]$Sign,
+  [switch]$RequireSigning
 )
 
 $ErrorActionPreference = "Stop"
@@ -72,16 +74,30 @@ if ($Release -or $Installer) {
   $msi = Get-ChildItem release -File -Filter "*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($msi) { Copy-Item $msi.FullName "release/Avalon-Agentique-Platform.msi" -Force }
 
+  $signed = $false
+  if ($Sign -or $RequireSigning) {
+    $signArgs = @{ ReleaseDir = "release" }
+    if ($RequireSigning) { $signArgs.RequireSigning = $true }
+    & "$PSScriptRoot\sign-windows.ps1" @signArgs
+    $statusFile = "release/signing/status.txt"
+    if ((Test-Path $statusFile) -and ((Get-Content $statusFile -Raw).Trim() -eq "SIGNED")) {
+      $signed = $true
+      & "$PSScriptRoot\sign-windows.ps1" -ReleaseDir release -VerifyOnly
+    }
+  }
+
+  $channel = if ($signed) { "SIGNED" } else { "DEV" }
+  $signing = if ($signed) { "authenticode" } else { "unsigned" }
   "0.1.0" | Set-Content release/version.txt -NoNewline
-  @"
-{
-  "product": "Avalon Agentique Platform",
-  "version": "0.1.0",
-  "channel": "DEV",
-  "signed": false,
-  "note": "Production signing requires Avalon Capital code-signing cert — not fabricated here"
-}
-"@ | Set-Content release/manifest.json
+  $manifest = @{
+    product = "Avalon Agentique Platform"
+    version = "0.1.0"
+    channel = $channel
+    signed = $signed
+    signing = $signing
+    note = "Production signing requires Avalon Capital Authenticode secrets — never fabricate certificates"
+  } | ConvertTo-Json
+  Set-Content -Path release/manifest.json -Value $manifest
 
   if (Test-Path release/checksums/SHA256SUMS) { Remove-Item release/checksums/SHA256SUMS }
   Get-ChildItem release -File | ForEach-Object {
@@ -89,7 +105,7 @@ if ($Release -or $Installer) {
     "$hash  $($_.Name)" | Add-Content release/checksums/SHA256SUMS
   }
 
-  Write-Host "Release folder:"
+  Write-Host "Release folder (signed=$signed channel=$channel):"
   Get-ChildItem release -Recurse | Format-Table Name, Length
 }
 

@@ -53,4 +53,6 @@ CI uploads machine-readable evidence:
 
 This validates unattended installation, process launch, first-run secure
 initialization, database-at-rest format, and uninstall behavior. It does not
-replace manual visual UI inspection or production Authenticode validation.
+replace manual visual UI inspection. When `manifest.signed=true`, CI also
+enforces Authenticode verification (`scripts/sign-windows.ps1 -VerifyOnly`);
+see `docs/CODE_SIGNING.md`.
