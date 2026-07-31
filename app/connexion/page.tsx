@@ -4,7 +4,11 @@ import { LockKeyhole, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function SignInPage() {
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+  if (
+    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("placeholder") ||
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("replace_me")
+  ) {
     return (
       <main className="min-h-screen px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
