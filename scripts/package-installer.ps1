@@ -11,16 +11,18 @@ if ($Build) {
   & "$PSScriptRoot\build.ps1" -Installer
 } else {
   New-Item -ItemType Directory -Force release, release/checksums | Out-Null
-  $bundle = "apps/desktop/src-tauri/target/release/bundle"
-  if (-not (Test-Path $bundle)) {
-    throw "Bundle not found at $bundle — run build.ps1 -Installer first"
+  $found = $false
+  foreach ($bundle in @("target/release/bundle", "apps/desktop/src-tauri/target/release/bundle")) {
+    if (-not (Test-Path $bundle)) { continue }
+    $found = $true
+    Get-ChildItem -Path $bundle -Recurse -File -Include *.exe, *.msi | ForEach-Object {
+      Copy-Item $_.FullName ("release/" + $_.Name) -Force
+    }
   }
-  Get-ChildItem -Recurse $bundle -Include *.exe, *.msi | ForEach-Object {
-    Copy-Item $_.FullName ("release/" + $_.Name) -Force
-  }
-  $nsis = Get-ChildItem release -Filter "*Setup*.exe" | Select-Object -First 1
+  if (-not $found) { throw "Bundle not found — run build.ps1 -Installer first" }
+  $nsis = Get-ChildItem release -File -Filter "*-setup.exe" | Select-Object -First 1
   if ($nsis) { Copy-Item $nsis.FullName "release/Avalon-Agentique-Platform-Setup.exe" -Force }
-  $msi = Get-ChildItem release -Filter "*.msi" | Select-Object -First 1
+  $msi = Get-ChildItem release -File -Filter "*.msi" | Select-Object -First 1
   if ($msi) { Copy-Item $msi.FullName "release/Avalon-Agentique-Platform.msi" -Force }
   Write-Host "Packaged into release/"
 }

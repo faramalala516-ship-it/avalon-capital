@@ -86,8 +86,15 @@ Mock package + manifest + prompt seed + Acceptance J contract test PASS. Busines
 
 ## INSTALLER STATUS
 
-NSIS (`installer/nsis/avalon.nsi`), WiX stub, Tauri bundle targets `nsis`+`msi`, `scripts/build.ps1` / `package-installer.ps1`, WebView2 bootstrap strategy documented.  
-GitHub Actions job `windows-installer` (`.github/workflows/avalon-platform-core.yml`) builds Setup.exe/MSI on `windows-latest` and uploads `avalon-windows-installers`. **Linux agents cannot emit the EXE/MSI locally** — CI Windows is the production packaging path.
+NSIS + MSI **successfully produced by CI** on `windows-latest` (Tauri):
+
+- `Avalon Agentique Platform_0.1.0_x64-setup.exe`
+- `Avalon Agentique Platform_0.1.0_x64_en-US.msi`
+- plus `avalon-core.exe` / `avalon-desktop.exe`
+
+Staging fixed to read Cargo **workspace** `target/release/bundle` (not `src-tauri/target`).  
+Workflow: `.github/workflows/avalon-platform-core.yml`. Artifacts: `avalon-windows-installers`.  
+V1 unsigned (`signed: false`). WebView2 bootstrap documented.
 
 ## FILES CREATED
 

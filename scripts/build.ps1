@@ -55,16 +55,22 @@ if ($Release -or $Installer) {
     Copy-Item target/release/avalon-core.exe release/ -Force
   }
 
-  $bundle = "apps/desktop/src-tauri/target/release/bundle"
-  if (Test-Path $bundle) {
-    Get-ChildItem -Recurse $bundle -Include *.exe, *.msi -ErrorAction SilentlyContinue | ForEach-Object {
+  $bundleCandidates = @(
+    "target/release/bundle",
+    "apps/desktop/src-tauri/target/release/bundle"
+  )
+  foreach ($bundle in $bundleCandidates) {
+    if (-not (Test-Path $bundle)) { continue }
+    Get-ChildItem -Path $bundle -Recurse -File -Include *.exe, *.msi -ErrorAction SilentlyContinue | ForEach-Object {
       Copy-Item $_.FullName ("release/" + $_.Name) -Force
+      Write-Host "Staged $($_.Name)"
     }
-    $nsis = Get-ChildItem release -Filter "*Setup*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($nsis) { Copy-Item $nsis.FullName "release/Avalon-Agentique-Platform-Setup.exe" -Force }
-    $msi = Get-ChildItem release -Filter "*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($msi) { Copy-Item $msi.FullName "release/Avalon-Agentique-Platform.msi" -Force }
   }
+  $nsis = Get-ChildItem release -File -Filter "*-setup.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (-not $nsis) { $nsis = Get-ChildItem release -File -Filter "*Setup*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 }
+  if ($nsis) { Copy-Item $nsis.FullName "release/Avalon-Agentique-Platform-Setup.exe" -Force }
+  $msi = Get-ChildItem release -File -Filter "*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($msi) { Copy-Item $msi.FullName "release/Avalon-Agentique-Platform.msi" -Force }
 
   "0.1.0" | Set-Content release/version.txt -NoNewline
   @"

@@ -152,19 +152,46 @@ jobs:
           if (Test-Path target/release/avalon-core.exe) {
             Copy-Item -Force target/release/avalon-core.exe release/avalon-core.exe
           }
+          if (Test-Path target/release/avalon-desktop.exe) {
+            Copy-Item -Force target/release/avalon-desktop.exe release/avalon-desktop.exe
+          }
 
-          $bundle = "apps/desktop/src-tauri/target/release/bundle"
-          if (Test-Path $bundle) {
-            Get-ChildItem -Recurse $bundle -Include *.exe,*.msi -ErrorAction SilentlyContinue | ForEach-Object {
-              Copy-Item $_.FullName (Join-Path "release" $_.Name) -Force
-              Write-Host "Staged $($_.Name)"
+          # Cargo workspace emits Tauri bundles under the repo-root target/, not src-tauri/target.
+          $bundleCandidates = @(
+            "target/release/bundle",
+            "apps/desktop/src-tauri/target/release/bundle"
+          )
+          foreach ($bundle in $bundleCandidates) {
+            if (-not (Test-Path $bundle)) { continue }
+            Write-Host "Scanning bundle dir $bundle"
+            Get-ChildItem -Path $bundle -Recurse -File -Include *.exe,*.msi -ErrorAction SilentlyContinue | ForEach-Object {
+              $dest = Join-Path "release" $_.Name
+              Copy-Item $_.FullName $dest -Force
+              Write-Host "Staged $($_.Name) ($($_.Length) bytes)"
             }
           }
 
-          $nsis = Get-ChildItem release -Filter "*Setup*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($nsis) { Copy-Item $nsis.FullName "release/Avalon-Agentique-Platform-Setup.exe" -Force }
-          $msi = Get-ChildItem release -Filter "*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($msi) { Copy-Item $msi.FullName "release/Avalon-Agentique-Platform.msi" -Force }
+          $nsis = Get-ChildItem release -File -Filter "*-setup.exe" -ErrorAction SilentlyContinue |
+            Sort-Object Length -Descending | Select-Object -First 1
+          if (-not $nsis) {
+            $nsis = Get-ChildItem release -File -Filter "*Setup*.exe" -ErrorAction SilentlyContinue |
+              Sort-Object Length -Descending | Select-Object -First 1
+          }
+          if ($nsis) {
+            Copy-Item $nsis.FullName "release/Avalon-Agentique-Platform-Setup.exe" -Force
+            Write-Host "Canonical Setup: $($nsis.Name)"
+          } else {
+            Write-Error "NSIS Setup.exe not found in release/ after staging"
+          }
+
+          $msi = Get-ChildItem release -File -Filter "*.msi" -ErrorAction SilentlyContinue |
+            Sort-Object Length -Descending | Select-Object -First 1
+          if ($msi) {
+            Copy-Item $msi.FullName "release/Avalon-Agentique-Platform.msi" -Force
+            Write-Host "Canonical MSI: $($msi.Name)"
+          } else {
+            Write-Warning "MSI not found in release/ after staging"
+          }
 
           Set-Content -Path release/version.txt -Value "0.1.0" -NoNewline
           $manifest = @{
@@ -174,6 +201,7 @@ jobs:
             channel = "DEV"
             signed = $false
             webview2 = "evergreen-bootstrap-or-system"
+            artifacts = @(Get-ChildItem release -File | ForEach-Object { $_.Name })
           } | ConvertTo-Json
           Set-Content -Path release/manifest.json -Value $manifest
 
