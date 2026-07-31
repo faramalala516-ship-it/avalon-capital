@@ -1,0 +1,4 @@
+# Built artifacts produced by scripts/build.sh — binary not stored in git
+e9dd8507f4bf0c6f42458e41aea833ad0bd3f6127272335eee9bf4d58541ed67  release/version.txt
+a1b8b669e67089af2df676c8a3a2f1b291cf644edf37f77b49a8ef2408b15452  release/manifest.json
+7ce0e2631ba674918218bc5313fe0a04509bce5d3cd6f13503c954748b43c5d9  release/release-notes.md

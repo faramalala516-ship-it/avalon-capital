@@ -1,0 +1,24 @@
+[package]
+name = "avalon-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Avalon Agentique Platform desktop shell (Tauri 2)"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+avalon-kernel = { path = "../../../core/kernel" }
+avalon-security = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tauri = { version = "2", features = [] }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+parking_lot = { workspace = true }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

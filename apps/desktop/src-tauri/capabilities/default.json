@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Restrictive Avalon desktop capabilities — no shell, no arbitrary FS",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}

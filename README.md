@@ -1,4 +1,33 @@
-# Avalon Capital
+# Avalon Capital / Avalon Agentique Platform
+
+This repository contains two related products:
+
+1. **Avalon Capital Web SaaS** (existing) — Next.js institutional research site at the repository root (`app/`, `lib/`, …).
+2. **Avalon Agentique Platform-Core** (new) — Windows-first local OS for Avalon AI agents (`apps/desktop`, `core/`, `services/`, `agents/`).
+
+## Platform-Core quick start
+
+```bash
+# Tests (Core)
+chmod +x scripts/*.sh
+./scripts/test.sh
+
+# Run Core local API on 127.0.0.1:8741
+./scripts/dev.sh /tmp/avalon-dev
+
+# Desktop UI (Vite) against local API
+cd apps/desktop && npm install && npm run dev
+```
+
+Windows packaging: `scripts/build.ps1 -Release -Installer` (requires WebView2 + NSIS/WiX / Tauri).
+
+Documentation: `docs/` — start with `docs/TARGET_ARCHITECTURE.md` and `docs/SECURITY_ARCHITECTURE.md`.
+
+Build report: `AVALON_CORE_BUILD_REPORT.md`.
+
+---
+
+# Avalon Capital (Web)
 
 Avalon Capital est une plateforme web institutionnelle d'analyse financiere assistee par IA: market intelligence, recherche macro, scanner trading, portefeuille intelligent et diversification en pierres precieuses.
 

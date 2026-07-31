@@ -1,0 +1,17 @@
+[package]
+name = "avalon-network"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+avalon-audit = { path = "../audit" }
+avalon-permissions = { path = "../permissions" }
+avalon-security = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+url = "2"
+
+[dev-dependencies]
+tempfile = { workspace = true }
