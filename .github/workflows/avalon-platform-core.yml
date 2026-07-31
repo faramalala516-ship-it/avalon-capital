@@ -218,4 +218,50 @@ jobs:
           name: avalon-windows-installers
           path: |
             release/**
+          if-no-files-found: error
+
+  windows-install-smoke:
+    name: Clean Windows install (${{ matrix.package }})
+    runs-on: windows-latest
+    needs: [windows-installer]
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [nsis, msi]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows installers
+        uses: actions/download-artifact@v4
+        with:
+          name: avalon-windows-installers
+          path: release
+
+      - name: Verify release checksums
+        shell: pwsh
+        run: |
+          $lines = Get-Content release/checksums/SHA256SUMS
+          foreach ($line in $lines) {
+            if ($line -notmatch '^([0-9a-f]{64})\s{2}(.+)$') { continue }
+            $expected = $Matches[1]
+            $file = Join-Path "release" $Matches[2]
+            if (-not (Test-Path $file)) { throw "Checksummed file missing: $file" }
+            $actual = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+            if ($actual -ne $expected) { throw "SHA256 mismatch: $file" }
+          }
+          Write-Host "All release checksums verified"
+
+      - name: Install, launch, initialize vault, and uninstall
+        shell: pwsh
+        run: |
+          ./scripts/test-windows-install.ps1 `
+            -PackageType "${{ matrix.package }}" `
+            -ReleaseDir "release"
+
+      - name: Upload install acceptance evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: avalon-install-test-${{ matrix.package }}
+          path: install-test-results/**
           if-no-files-found: warn
