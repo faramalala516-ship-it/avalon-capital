@@ -40,3 +40,6 @@ test_workspaces/
 *.pdb
 apps/desktop/node_modules
 apps/desktop/dist
+__pycache__/
+**/__pycache__/
+*.pyc
