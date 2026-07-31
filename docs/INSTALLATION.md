@@ -8,7 +8,7 @@ Windows 10/11 x64.
 
 | Kind | Path |
 |---|---|
-| Binaries (immutable) | `C:\Program Files\Avalon Capital\Avalon Agentique Platform\` |
+| Binaries (immutable) | `C:\Program Files\Avalon Agentique Platform\` |
 | App data | `%LOCALAPPDATA%\Avalon Capital\Agentique Platform\` |
 | Secure vault / keys | `%LOCALAPPDATA%\Avalon Capital\Agentique Platform\secure\` |
 | Workspaces | `%LOCALAPPDATA%\Avalon Capital\Agentique Platform\workspaces\` |
@@ -54,12 +54,15 @@ The uninstaller removes Program Files binaries and shortcuts.
 
 V1 artifacts may be unsigned (`manifest.signed=false`). Production releases must use Avalon Capital’s Authenticode certificate. Do not invent or commit certificates.
 
-## Acceptance (Install)
+## Acceptance (Install) — verified
 
-On a clean Windows 10/11 VM:
+Automated tests run on two independent clean Windows CI VMs:
 
-1. Install Setup.exe (offline if WebView2 preinstalled / bundled)
-2. Launch Avalon Command Center
-3. First-run wizard completes without requiring API keys
-4. Core vault initializes under LocalAppData
-5. Uninstall removes app; data remains unless manually deleted
+1. Install Setup.exe and MSI silently
+2. Launch Avalon Command Center and confirm it remains alive
+3. Confirm DPAPI root, encrypted vault, sealed DB, local identity, and audit creation
+4. Confirm the DB has no plaintext SQLite header
+5. Uninstall successfully
+6. Confirm binaries are removed and user data remains
+
+Both packages pass. Evidence: `ACCEPTANCE_TEST_A_WINDOWS.md`.

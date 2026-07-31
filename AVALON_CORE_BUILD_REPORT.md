@@ -82,7 +82,21 @@ Mock package + manifest + prompt seed + Acceptance J contract test PASS. Busines
 
 ## END-TO-END TEST RESULTS
 
-`avalon-core self-test` → **SELF_TEST_PASS**. Workspace `cargo test --exclude avalon-desktop` green.
+`avalon-core self-test` → **SELF_TEST_PASS**. Workspace
+`cargo test --exclude avalon-desktop` green.
+
+Windows Acceptance Test A → **PASS for NSIS and MSI** on two independent
+`windows-latest` VMs:
+
+- install exit code `0`
+- desktop alive after 15 seconds
+- DPAPI root + encrypted vault + sealed DB + identity + audit created
+- DB plaintext SQLite header absent
+- uninstall exit code `0`
+- executable removed
+- user data retained
+
+Evidence: `docs/ACCEPTANCE_TEST_A_WINDOWS.md`.
 
 ## INSTALLER STATUS
 
@@ -121,7 +135,6 @@ Platform monorepo trees, docs (`EXISTING_ARCHITECTURE_AUDIT`, `TARGET_ARCHITECTU
 
 ## REMAINING TASKS
 
-- Confirm first green `windows-installer` CI run on GitHub-hosted Windows; download artifacts.
 - Authenticode signing pipeline with real Avalon Capital certificate (not fabricated).
 - Optional SQLCipher feature flag when OpenSSL/sqlcipher vendoring validated.
 - Expand Excel COM path + DuckDB enablement.

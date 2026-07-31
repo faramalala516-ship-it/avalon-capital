@@ -22,7 +22,9 @@ cd apps/desktop && npm install && npm run dev
 Windows packaging: `scripts/build.ps1 -Installer` (requires WebView2 + Tauri).  
 CI: `.github/workflows/avalon-platform-core.yml` builds Linux Core tests + Windows NSIS/MSI artifacts.
 
-Documentation: `docs/` — start with `docs/TARGET_ARCHITECTURE.md`, `docs/INSTALLATION.md`, `docs/WINDOWS_CI_PACKAGING.md`.
+Documentation: `docs/` — start with `docs/TARGET_ARCHITECTURE.md`,
+`docs/INSTALLATION.md`, `docs/WINDOWS_CI_PACKAGING.md`, and
+`docs/ACCEPTANCE_TEST_A_WINDOWS.md`.
 
 Build report: `AVALON_CORE_BUILD_REPORT.md`.
 
