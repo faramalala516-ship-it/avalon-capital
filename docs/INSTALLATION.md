@@ -1,10 +1,65 @@
-# Installation (Windows)
+# Installation — Avalon Agentique Platform (Windows)
 
-1. Build with `scripts/build.ps1 -Release` on Windows (or CI Windows runners).
-2. Installer outputs under `release/`: Setup.exe / MSI when NSIS/WiX available.
-3. Binaries → `C:\Program Files\Avalon Capital\Avalon Agentique Platform\`
-4. Data → `%LOCALAPPDATA%\Avalon Capital\Agentique Platform\`
-5. Secrets never beside EXE.
-6. Offline WebView2 bootstrap: ship evergreen bootstrapper or require preinstalled WebView2.
+## Target
 
-Linux/macOS: Core CLI (`avalon-core`) is supported for development/tests.
+Windows 10/11 x64.
+
+## Layout after install
+
+| Kind | Path |
+|---|---|
+| Binaries (immutable) | `C:\Program Files\Avalon Capital\Avalon Agentique Platform\` |
+| App data | `%LOCALAPPDATA%\Avalon Capital\Agentique Platform\` |
+| Secure vault / keys | `%LOCALAPPDATA%\Avalon Capital\Agentique Platform\secure\` |
+| Workspaces | `%LOCALAPPDATA%\Avalon Capital\Agentique Platform\workspaces\` |
+| Logs / audit | `%LOCALAPPDATA%\Avalon Capital\Agentique Platform\logs\` |
+
+Secrets are **never** stored beside the executable under Program Files.
+
+## Build installers (Windows machine or CI)
+
+```powershell
+# Full release + Tauri NSIS/MSI
+.\scripts\build.ps1 -Installer
+
+# Or package after an existing tauri build
+.\scripts\package-installer.ps1 -Build
+```
+
+GitHub Actions workflow `.github/workflows/avalon-platform-core.yml` job `windows-installer` uploads:
+
+- `Avalon-Agentique-Platform-Setup.exe` (NSIS)
+- `Avalon-Agentique-Platform.msi` (WiX via Tauri, when produced)
+- `avalon-core.exe`
+- `checksums/SHA256SUMS`
+- `manifest.json` / `version.txt`
+
+## Offline WebView2 strategy
+
+Avalon uses the Microsoft Edge WebView2 runtime.
+
+1. **Preferred (online first install):** Tauri `webviewInstallMode.downloadBootstrapper` silently installs Evergreen Runtime if missing.
+2. **Offline media:** ship Microsoft’s Evergreen Standalone Installer on the install USB (`MicrosoftEdgeWebView2RuntimeInstallerX64.exe`) and run it before Avalon Setup when the target has no Internet.
+3. **Enterprise:** preinstall WebView2 via Intune/WSUS; Avalon then installs without network.
+4. `build.ps1` can bootstrap Evergreen during developer packaging (`Ensure-WebView2`). Use `-SkipWebViewBootstrap` on air-gapped packagers that already vendor the runtime.
+
+Avalon Core (`avalon-core.exe`) itself does **not** require WebView2 — only the Command Center GUI shell does.
+
+## Uninstall
+
+The uninstaller removes Program Files binaries and shortcuts.  
+**User data / vault under LocalAppData are retained** for recovery (see `SECURE_RECOVERY.md`).
+
+## Code signing
+
+V1 artifacts may be unsigned (`manifest.signed=false`). Production releases must use Avalon Capital’s Authenticode certificate. Do not invent or commit certificates.
+
+## Acceptance (Install)
+
+On a clean Windows 10/11 VM:
+
+1. Install Setup.exe (offline if WebView2 preinstalled / bundled)
+2. Launch Avalon Command Center
+3. First-run wizard completes without requiring API keys
+4. Core vault initializes under LocalAppData
+5. Uninstall removes app; data remains unless manually deleted

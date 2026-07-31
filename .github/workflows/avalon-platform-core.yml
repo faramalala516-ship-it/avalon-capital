@@ -1,0 +1,193 @@
+name: Avalon Platform Core
+
+on:
+  push:
+    branches: [main, "cursor/**"]
+    paths:
+      - "core/**"
+      - "services/**"
+      - "apps/desktop/**"
+      - "agents/**"
+      - "packages/**"
+      - "scripts/**"
+      - "installer/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/avalon-platform-core.yml"
+  pull_request:
+    paths:
+      - "core/**"
+      - "services/**"
+      - "apps/desktop/**"
+      - "agents/**"
+      - "packages/**"
+      - "scripts/**"
+      - "installer/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/avalon-platform-core.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-linux:
+    name: Core tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Core unit + integration tests
+        run: cargo test --workspace --exclude avalon-desktop
+
+      - name: Security acceptance suite
+        run: cargo test -p avalon-kernel --test acceptance_security
+
+      - name: Kernel self-test
+        run: |
+          TMP=$(mktemp -d)
+          cargo run -p avalon-kernel -- --data-dir "$TMP" self-test
+
+      - name: Release core binary
+        run: |
+          cargo build -p avalon-kernel --release
+          mkdir -p release/checksums
+          cp target/release/avalon-core release/avalon-core
+          echo "0.1.0" > release/version.txt
+          sha256sum release/avalon-core release/version.txt > release/checksums/SHA256SUMS
+
+      - name: Upload Linux core artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: avalon-core-linux-x64
+          path: |
+            release/avalon-core
+            release/version.txt
+            release/checksums/SHA256SUMS
+          if-no-files-found: error
+
+  desktop-ui:
+    name: Desktop UI build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: avalon-command-center-web
+          path: apps/desktop/dist
+
+  windows-installer:
+    name: Windows Tauri installer (NSIS + MSI)
+    runs-on: windows-latest
+    needs: [core-linux, desktop-ui]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            apps/desktop/src-tauri -> apps/desktop/src-tauri/target
+
+      - name: Install frontend deps
+        working-directory: apps/desktop
+        run: npm ci
+
+      - name: Ensure WebView2 Evergreen Runtime
+        shell: pwsh
+        run: |
+          $bootstrap = Join-Path $env:TEMP "MicrosoftEdgeWebview2Setup.exe"
+          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile $bootstrap
+          Start-Process -FilePath $bootstrap -ArgumentList "/silent","/install" -Wait -NoNewWindow
+          Write-Host "WebView2 bootstrap completed (or already present)"
+
+      - name: Build Core release binary
+        run: cargo build -p avalon-kernel --release
+
+      - name: Tauri build (NSIS + MSI)
+        working-directory: apps/desktop
+        shell: pwsh
+        run: |
+          npm exec -- tauri build --ci
+        env:
+          # Unsigned V1 — do not invent certificates
+          TAURI_SIGNING_PRIVATE_KEY: ""
+
+      - name: Stage release directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release, release/checksums | Out-Null
+          if (Test-Path target/release/avalon-core.exe) {
+            Copy-Item -Force target/release/avalon-core.exe release/avalon-core.exe
+          }
+
+          $bundle = "apps/desktop/src-tauri/target/release/bundle"
+          if (Test-Path $bundle) {
+            Get-ChildItem -Recurse $bundle -Include *.exe,*.msi -ErrorAction SilentlyContinue | ForEach-Object {
+              Copy-Item $_.FullName (Join-Path "release" $_.Name) -Force
+              Write-Host "Staged $($_.Name)"
+            }
+          }
+
+          $nsis = Get-ChildItem release -Filter "*Setup*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($nsis) { Copy-Item $nsis.FullName "release/Avalon-Agentique-Platform-Setup.exe" -Force }
+          $msi = Get-ChildItem release -Filter "*.msi" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($msi) { Copy-Item $msi.FullName "release/Avalon-Agentique-Platform.msi" -Force }
+
+          Set-Content -Path release/version.txt -Value "0.1.0" -NoNewline
+          $manifest = @{
+            product = "Avalon Agentique Platform"
+            version = "0.1.0"
+            build = $env:GITHUB_SHA
+            channel = "DEV"
+            signed = $false
+            webview2 = "evergreen-bootstrap-or-system"
+          } | ConvertTo-Json
+          Set-Content -Path release/manifest.json -Value $manifest
+
+          if (Test-Path release/checksums/SHA256SUMS) { Remove-Item release/checksums/SHA256SUMS }
+          Get-ChildItem release -File | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            Add-Content release/checksums/SHA256SUMS "$hash  $($_.Name)"
+          }
+          Get-ChildItem release -Recurse | Select-Object FullName, Length
+
+      - name: Upload Windows release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: avalon-windows-installers
+          path: |
+            release/**
+          if-no-files-found: warn

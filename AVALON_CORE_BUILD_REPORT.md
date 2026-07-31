@@ -86,7 +86,8 @@ Mock package + manifest + prompt seed + Acceptance J contract test PASS. Busines
 
 ## INSTALLER STATUS
 
-NSIS (`installer/nsis/avalon.nsi`), WiX stub, Tauri bundle targets `nsis`+`msi`, `scripts/build.ps1`. **Setup.exe/MSI binary not produced in this Linux environment** — configs and release layout ready.
+NSIS (`installer/nsis/avalon.nsi`), WiX stub, Tauri bundle targets `nsis`+`msi`, `scripts/build.ps1` / `package-installer.ps1`, WebView2 bootstrap strategy documented.  
+GitHub Actions job `windows-installer` (`.github/workflows/avalon-platform-core.yml`) builds Setup.exe/MSI on `windows-latest` and uploads `avalon-windows-installers`. **Linux agents cannot emit the EXE/MSI locally** — CI Windows is the production packaging path.
 
 ## FILES CREATED
 
@@ -113,10 +114,10 @@ Platform monorepo trees, docs (`EXISTING_ARCHITECTURE_AUDIT`, `TARGET_ARCHITECTU
 
 ## REMAINING TASKS
 
-- Windows CI job for `tauri build` + signed installer.
+- Confirm first green `windows-installer` CI run on GitHub-hosted Windows; download artifacts.
+- Authenticode signing pipeline with real Avalon Capital certificate (not fabricated).
 - Optional SQLCipher feature flag when OpenSSL/sqlcipher vendoring validated.
 - Expand Excel COM path + DuckDB enablement.
-- Code signing pipeline (certs not fabricated).
 
 ## BUILD COMMAND
 

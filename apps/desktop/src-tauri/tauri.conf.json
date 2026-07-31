@@ -15,7 +15,8 @@
         "title": "Avalon Command Center",
         "width": 1440,
         "height": 900,
-        "resizable": true
+        "resizable": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {
@@ -25,16 +26,32 @@
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],
-    "icon": ["icons/icon.png"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
     "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
       "nsis": {
         "installMode": "perMachine",
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "startMenuFolder": "Avalon Capital"
+      },
+      "wix": {
+        "language": "en-US"
       }
     },
     "publisher": "Avalon Capital",
+    "copyright": "Copyright (c) Avalon Capital",
+    "category": "Finance",
     "shortDescription": "Local OS for Avalon AI agents",
-    "longDescription": "Avalon Agentique Platform-Core — secure local agent runtime."
+    "longDescription": "Avalon Agentique Platform-Core — secure local agent runtime with vault, permissions, and offline lock."
   },
   "plugins": {}
 }
