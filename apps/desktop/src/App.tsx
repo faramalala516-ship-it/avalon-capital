@@ -9,20 +9,20 @@ import Settings from "./pages/Settings";
 import FirstRun from "./pages/FirstRun";
 
 const NAV = [
-  ["/", "Overview"],
+  ["/", "Vue d'ensemble"],
   ["/agents", "Agents"],
   ["/macro", "Macro"],
-  ["/markets", "Markets"],
-  ["/data", "Data"],
-  ["/calendar", "Calendar"],
-  ["/workspaces", "Workspaces"],
-  ["/models", "Models"],
-  ["/tools", "Tools"],
-  ["/automations", "Automations"],
-  ["/security", "Security"],
+  ["/markets", "Marchés"],
+  ["/data", "Données"],
+  ["/calendar", "Calendrier"],
+  ["/workspaces", "Espaces de travail"],
+  ["/models", "Modèles"],
+  ["/tools", "Outils"],
+  ["/automations", "Automatisations"],
+  ["/security", "Sécurité"],
   ["/audit", "Audit"],
-  ["/matrix", "The Matrix"],
-  ["/settings", "Settings"]
+  ["/matrix", "La Matrice"],
+  ["/settings", "Paramètres"]
 ] as const;
 
 export default function App() {
@@ -34,12 +34,12 @@ export default function App() {
 
   return (
     <>
-      {import.meta.env.DEV ? <div className="banner-dev">Development Mode</div> : null}
+      {import.meta.env.DEV ? <div className="banner-dev">Mode développement</div> : null}
       <div className="app-shell">
         <aside className="sidebar">
           <div className="brand">
             Avalon Agentique
-            <small>Command Center</small>
+            <small>Centre de commande</small>
           </div>
           <nav className="nav">
             {NAV.map(([to, label]) => (
@@ -49,7 +49,7 @@ export default function App() {
             ))}
           </nav>
           <div className="mono" style={{ marginTop: "auto", color: "var(--muted)" }}>
-            {status ? `${status.version} · ${status.build}` : "connecting…"}
+            {status ? `${status.version} · ${status.build}` : "connexion…"}
           </div>
         </aside>
         <main className="main">
@@ -77,7 +77,9 @@ function Placeholder() {
   return (
     <>
       <h1 className="page-title">Section</h1>
-      <p className="page-sub">Bound to live Core state as modules come online. No fictional production data.</p>
+      <p className="page-sub">
+        Reliée à l’état réel du Core dès que le module est disponible. Aucune donnée de production fictive.
+      </p>
     </>
   );
 }

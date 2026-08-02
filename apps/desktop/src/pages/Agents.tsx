@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchJson, statusClass } from "../lib/api";
+import { frStatus } from "../lib/i18n";
 
 type Agent = {
   status: string;
@@ -24,7 +25,7 @@ export default function Agents() {
       setAgents(list);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "failed");
+      setError(e instanceof Error ? e.message : "échec");
     }
   }
 
@@ -43,8 +44,8 @@ export default function Agents() {
 
   return (
     <>
-      <h1 className="page-title">Agent Control Center</h1>
-      <p className="page-sub">Real runtime state from Avalon Agent Host.</p>
+      <h1 className="page-title">Centre de contrôle des agents</h1>
+      <p className="page-sub">État réel du runtime fourni par Avalon Agent Host.</p>
       {error ? <p className="status-bad">{error}</p> : null}
       {agents.map((a) => (
         <div className="agent-row" key={a.manifest.agent_id}>
@@ -52,20 +53,24 @@ export default function Agents() {
             <strong>{a.manifest.name}</strong>
             <div className="mono">{a.manifest.agent_id} · v{a.manifest.version}</div>
           </div>
-          <div className={statusClass(a.status)}>{a.status}</div>
-          <div className="mono">ws: {a.workspace}</div>
+          <div className={statusClass(a.status)}>{frStatus(a.status)}</div>
+          <div className="mono">espace : {a.workspace}</div>
           <div className="mono">{a.last_error ?? "—"}</div>
           <div className="actions">
-            <button onClick={() => start(a.manifest.agent_id)} disabled={a.status === "NOT_INSTALLED"}>Start</button>
-            <button onClick={() => stop(a.manifest.agent_id)}>Stop</button>
-            <button onClick={() => setSelected(a)}>Inspect</button>
-            {a.status === "NOT_INSTALLED" ? <button className="primary">Install Agent Package</button> : null}
+            <button onClick={() => start(a.manifest.agent_id)} disabled={a.status === "NOT_INSTALLED"}>
+              Démarrer
+            </button>
+            <button onClick={() => stop(a.manifest.agent_id)}>Arrêter</button>
+            <button onClick={() => setSelected(a)}>Inspecter</button>
+            {a.status === "NOT_INSTALLED" ? (
+              <button className="primary">Installer le paquet agent</button>
+            ) : null}
           </div>
         </div>
       ))}
       {selected ? (
         <div className="panel">
-          <h2 style={{ fontSize: "1rem" }}>Agent Inspector — {selected.manifest.name}</h2>
+          <h2 style={{ fontSize: "1rem" }}>Inspecteur agent — {selected.manifest.name}</h2>
           <pre className="mono">{JSON.stringify(selected, null, 2)}</pre>
         </div>
       ) : null}

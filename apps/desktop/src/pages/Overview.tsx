@@ -1,4 +1,5 @@
 import { PlatformStatus, NetworkMode, statusClass } from "../lib/api";
+import { frStatus } from "../lib/i18n";
 
 export default function Overview({
   status,
@@ -13,34 +14,40 @@ export default function Overview({
 }) {
   return (
     <>
-      <h1 className="page-title">Overview</h1>
-      <p className="page-sub">Live Avalon Core health — institutional Command Center.</p>
+      <h1 className="page-title">Vue d'ensemble</h1>
+      <p className="page-sub">Santé en direct du Core Avalon — centre de commande institutionnel.</p>
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-        <button className="primary" onClick={onRefresh} disabled={loading}>Refresh</button>
-        <button onClick={() => onNetwork("ONLINE")}>ONLINE</button>
-        <button onClick={() => onNetwork("SYNC_ONLY")}>SYNC ONLY</button>
-        <button onClick={() => onNetwork("OFFLINE_LOCK")}>OFFLINE LOCK</button>
+        <button className="primary" onClick={onRefresh} disabled={loading}>Actualiser</button>
+        <button onClick={() => onNetwork("ONLINE")}>EN LIGNE</button>
+        <button onClick={() => onNetwork("SYNC_ONLY")}>SYNC UNIQUEMENT</button>
+        <button onClick={() => onNetwork("OFFLINE_LOCK")}>VERROUILLAGE HORS LIGNE</button>
       </div>
       {!status ? (
-        <p className="status-warn">Core status UNKNOWN — start `avalon-core serve` or the Tauri shell.</p>
+        <p className="status-warn">
+          État du Core INCONNU — lancez `avalon-core serve` ou le shell Tauri.
+        </p>
       ) : (
         <>
           <div className="grid">
-            <Metric label="Platform health" value={status.health?.overall ?? status.security_status} />
-            <Metric label="Security" value={status.security_status} />
-            <Metric label="Network" value={status.network_mode} />
-            <Metric label="Vault" value={status.vault_unlocked ? "UNLOCKED" : "LOCKED"} />
-            <Metric label="Agents" value={`${status.running_agents}/${status.agent_count} running`} />
-            <Metric label="Failed agents" value={String(status.failed_agents)} />
+            <Metric label="Santé plateforme" value={frStatus(status.health?.overall ?? status.security_status)} raw={status.health?.overall ?? status.security_status} />
+            <Metric label="Sécurité" value={frStatus(status.security_status)} raw={status.security_status} />
+            <Metric label="Réseau" value={frStatus(status.network_mode)} raw={status.network_mode} />
+            <Metric
+              label="Coffre-fort"
+              value={status.vault_unlocked ? "DÉVERROUILLÉ" : "VERROUILLÉ"}
+              raw={status.vault_unlocked ? "UNLOCKED" : "LOCKED"}
+            />
+            <Metric label="Agents" value={`${status.running_agents}/${status.agent_count} en cours`} />
+            <Metric label="Agents en échec" value={String(status.failed_agents)} />
             <Metric label="CPU" value={`${status.cpu_percent.toFixed(1)}%`} />
-            <Metric label="RAM" value={`${status.memory_used_mb}/${status.memory_total_mb} MB`} />
-            <Metric label="Last backup" value={status.last_backup ?? "NONE"} />
-            <Metric label="Last data sync" value={status.last_data_sync ?? "NONE"} />
+            <Metric label="RAM" value={`${status.memory_used_mb}/${status.memory_total_mb} Mo`} />
+            <Metric label="Dernière sauvegarde" value={status.last_backup ?? "AUCUNE"} />
+            <Metric label="Dernière sync données" value={status.last_data_sync ?? "AUCUNE"} />
           </div>
           <div className="panel">
-            <h2 style={{ fontSize: "1rem" }}>Warnings</h2>
+            <h2 style={{ fontSize: "1rem" }}>Avertissements</h2>
             {status.warnings.length === 0 ? (
-              <p className="mono">No warnings.</p>
+              <p className="mono">Aucun avertissement.</p>
             ) : (
               <ul>{status.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
             )}
@@ -51,11 +58,11 @@ export default function Overview({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value, raw }: { label: string; value: string; raw?: string }) {
   return (
     <div className="metric">
       <div className="label">{label}</div>
-      <div className={`value ${statusClass(value)}`}>{value}</div>
+      <div className={`value ${statusClass(raw ?? value)}`}>{value}</div>
     </div>
   );
 }

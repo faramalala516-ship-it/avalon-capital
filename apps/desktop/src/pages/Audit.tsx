@@ -26,16 +26,18 @@ export default function Audit() {
 
   return (
     <>
-      <h1 className="page-title">Audit / Live Event Stream</h1>
-      <p className="page-sub">Tamper-evident audit is stored by Core. UI shows recent events without secrets.</p>
-      <button onClick={exportJson}>Export JSON</button>
+      <h1 className="page-title">Audit / flux d’événements</h1>
+      <p className="page-sub">
+        L’audit anti-falsification est stocké par le Core. L’UI affiche les événements récents sans secrets.
+      </p>
+      <button onClick={exportJson}>Exporter JSON</button>
       <div className="panel stream">
         {events.map((e, i) => (
           <div key={i}>
             {e.timestamp} · {e.source} · {e.event_type}
           </div>
         ))}
-        {events.length === 0 ? <div>No events yet.</div> : null}
+        {events.length === 0 ? <div>Aucun événement pour le moment.</div> : null}
       </div>
     </>
   );

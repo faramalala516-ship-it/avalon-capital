@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Avalon Command Center",
+        "title": "Centre de commande Avalon",
         "width": 1440,
         "height": 900,
         "resizable": true,
@@ -40,11 +40,12 @@
       "nsis": {
         "installMode": "perMachine",
         "displayLanguageSelector": false,
+        "languages": ["French"],
         "installerIcon": "icons/icon.ico",
         "startMenuFolder": "Avalon Capital"
       },
       "wix": {
-        "language": "en-US"
+        "language": "fr-FR"
       }
     },
     "publisher": "Avalon Capital",

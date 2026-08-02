@@ -1,4 +1,5 @@
 import { NetworkMode, PlatformStatus } from "../lib/api";
+import { frStatus } from "../lib/i18n";
 
 export default function Settings({
   status,
@@ -9,15 +10,17 @@ export default function Settings({
 }) {
   return (
     <>
-      <h1 className="page-title">Settings</h1>
-      <p className="page-sub">Local identity and network policy. Secrets are never stored in config files.</p>
+      <h1 className="page-title">Paramètres</h1>
+      <p className="page-sub">
+        Identité locale et politique réseau. Les secrets ne sont jamais stockés dans des fichiers de config.
+      </p>
       <div className="panel mono">
-        <div>Identity: {status?.identity_id ?? "—"}</div>
-        <div>Network: {status?.network_mode ?? "—"}</div>
-        <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
-          <button onClick={() => onNetwork("ONLINE")}>ONLINE</button>
-          <button onClick={() => onNetwork("SYNC_ONLY")}>SYNC ONLY</button>
-          <button onClick={() => onNetwork("OFFLINE_LOCK")}>OFFLINE LOCK</button>
+        <div>Identité : {status?.identity_id ?? "—"}</div>
+        <div>Réseau : {status ? frStatus(status.network_mode) : "—"}</div>
+        <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button onClick={() => onNetwork("ONLINE")}>EN LIGNE</button>
+          <button onClick={() => onNetwork("SYNC_ONLY")}>SYNC UNIQUEMENT</button>
+          <button onClick={() => onNetwork("OFFLINE_LOCK")}>VERROUILLAGE HORS LIGNE</button>
         </div>
       </div>
     </>
