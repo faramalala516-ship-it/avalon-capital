@@ -43,3 +43,8 @@ apps/desktop/dist
 __pycache__/
 **/__pycache__/
 *.pyc
+
+# Python packaging
+**/avalon_agent_sdk.egg-info/
+**/__pycache__/
+*.egg-info/

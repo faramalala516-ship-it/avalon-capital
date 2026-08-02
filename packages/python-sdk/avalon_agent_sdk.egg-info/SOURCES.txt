@@ -1,6 +1,0 @@
-pyproject.toml
-avalon_agent_sdk/__init__.py
-avalon_agent_sdk.egg-info/PKG-INFO
-avalon_agent_sdk.egg-info/SOURCES.txt
-avalon_agent_sdk.egg-info/dependency_links.txt
-avalon_agent_sdk.egg-info/top_level.txt
