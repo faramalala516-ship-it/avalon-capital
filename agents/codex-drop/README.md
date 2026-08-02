@@ -1,38 +1,38 @@
 # Zone de dépôt Codex → Avalon
 
-Déposez ici les agents livrés par Codex. Avalon les **installe** (copie + validation + permissions), le Core ne contient **jamais** la logique métier.
+> **Important :** ouvrir le dépôt **`avalon-capital`** (celui avec `Cargo.toml` à la racine).  
+> Un workspace nommé seulement « AGENTIQUE » sans ce monorepo ne peut pas installer via `avalon-kernel`.
+
+Voir aussi `CODEX.md` à la racine.
 
 ## Macro-X
 
+Paquet prêt à étendre :
+
 ```
 agents/codex-drop/macro-x/
-  avalon-agent.json   # obligatoire
-  main.py             # entrypoint (ou autre déclaré)
-  ...                 # code, prompts, assets
+  avalon-agent.json
+  main.py                 # étendre run_macro_cycle()
+  requirements.txt
+  README.md
 ```
 
-### Installer
+### Sans cargo (validation Python)
 
 ```bash
-# CLI
-cargo run -p avalon-kernel -- agents install agents/codex-drop/macro-x
-
-# ou depuis le Centre de commande → Agents → Installer / mettre à jour
+./scripts/codex-setup.sh
+python3 scripts/validate-agent-package.py agents/codex-drop/macro-x
 ```
 
-Priorité au démarrage desktop :
+### Avec cargo (install Core)
 
-1. `agents/codex-drop/macro-x`
-2. `agents/macro-x`
-3. `agents/templates/macro-x-mock` (fallback contrat)
-4. `%LOCALAPPDATA%\Avalon Capital\Agentique Platform\agents\incoming\macro-x`
+```bash
+cargo run -p avalon-kernel -- agents install agents/codex-drop/macro-x
+```
 
-### Règles absolues
+### Règles
 
-- `agent_id` doit être `macro-x`
-- Interdit : `shell.raw`, PowerShell, cmd.exe
-- Permissions déclarées narrowement dans le manifeste
-- Secrets via Vault / références — jamais en clair dans le paquet
-- Business logic Macro-X **hors** du Kernel Avalon
-
-Voir `docs/CODEX_AGENT_BUILD_GUIDE.md` et `docs/MACRO_X_INTEGRATION.md`.
+- `agent_id` = `macro-x`
+- Interdit : `shell.raw`
+- Pas de logique métier dans `core/`
+- SDK : `packages/python-sdk`

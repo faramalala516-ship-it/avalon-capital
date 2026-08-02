@@ -1,5 +1,9 @@
 # Avalon Agents — instructions pour Codex / contributeurs
 
+> Travaillez dans **`avalon-capital`** (racine = `Cargo.toml`).  
+> Si vous êtes dans un dossier AGENTIQUE sans ce monorepo : changez de workspace.  
+> Voir `CODEX.md`.
+
 ## Rôle
 
 Avalon Agentique Platform-Core héberge des **agents indépendants**.  
@@ -8,19 +12,20 @@ Le Kernel gère vault, permissions, network broker, audit, workspaces.
 
 ## Macro-X (chemin Codex)
 
-1. Implémenter le paquet sous `agents/codex-drop/macro-x/`
-2. Fichiers minimum :
-   - `avalon-agent.json` (`agent_id: "macro-x"`, `runtime: "python"`, `entrypoint: "main.py"`)
-   - `main.py` utilisant `avalon_agent_sdk.AvalonAgentClient`
-3. Installer :
+Le squelette existe déjà : `agents/codex-drop/macro-x/` (SDK réel).
+
+1. Étendre `run_macro_cycle()` dans `main.py`
+2. Garder `avalon-agent.json` (`agent_id: "macro-x"`)
+3. Setup / validation (sans cargo si besoin) :
+   ```bash
+   ./scripts/codex-setup.sh
+   python3 scripts/validate-agent-package.py agents/codex-drop/macro-x
+   ```
+4. Installer (cargo requis) :
    ```bash
    cargo run -p avalon-kernel -- --data-dir /tmp/avalon-dev agents install agents/codex-drop/macro-x
    ```
-4. Démarrer depuis l’UI **Agents** ou :
-   ```bash
-   # après serve + token
-   curl -H "x-avalon-token: $(cat $DATA/api.token)" -X POST http://127.0.0.1:8741/v1/agents/macro-x/start
-   ```
+5. Démarrer depuis l’UI **Agents** ou API `POST /v1/agents/macro-x/start`
 
 ## Contrat manifeste
 
