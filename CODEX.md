@@ -20,16 +20,28 @@ branche: cursor/avalon-agentique-platform-core-14e5
 
 ## Setup en 30 secondes
 
+### Linux / macOS / cloud
+
 ```bash
 # Depuis la racine du repo (là où est Cargo.toml)
 ./scripts/codex-setup.sh
-
-# Valider le paquet Macro-X SANS cargo (si Rust absent)
 python3 scripts/validate-agent-package.py agents/codex-drop/macro-x
-
-# Installer dans Avalon Core (nécessite cargo)
 cargo run -p avalon-kernel -- agents install agents/codex-drop/macro-x
 ```
+
+### Windows (sans bash / sans cargo)
+
+```powershell
+# Depuis la racine du repo
+.\scripts\codex-setup.ps1
+.\scripts\install-agent-windows.ps1 -StartUi
+```
+
+Puis dans l’UI : **Agents → Installer / mettre à jour → Démarrer**.
+
+Ça copie le paquet vers :
+
+`%LOCALAPPDATA%\Avalon Capital\Agentique Platform\agents\incoming\macro-x`
 
 ## Mission Codex Macro-X
 
