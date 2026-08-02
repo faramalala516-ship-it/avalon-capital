@@ -18,6 +18,7 @@ export default function Agents() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Agent | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -34,37 +35,84 @@ export default function Agents() {
   }, []);
 
   async function start(id: string) {
-    await fetchJson(`/v1/agents/${id}/start`, { method: "POST" });
-    await load();
+    setBusy(id);
+    try {
+      await fetchJson(`/v1/agents/${id}/start`, { method: "POST" });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "échec démarrage");
+    } finally {
+      setBusy(null);
+    }
   }
   async function stop(id: string) {
-    await fetchJson(`/v1/agents/${id}/stop`, { method: "POST" });
-    await load();
+    setBusy(id);
+    try {
+      await fetchJson(`/v1/agents/${id}/stop`, { method: "POST" });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "échec arrêt");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function installPreferred(id: string) {
+    setBusy(id);
+    try {
+      await fetchJson("/v1/agents/install", {
+        method: "POST",
+        body: JSON.stringify({ agent_id: id })
+      });
+      await load();
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Installation impossible — déposez le paquet Codex dans agents/codex-drop/" + id
+      );
+    } finally {
+      setBusy(null);
+    }
   }
 
   return (
     <>
       <h1 className="page-title">Centre de contrôle des agents</h1>
-      <p className="page-sub">État réel du runtime fourni par Avalon Agent Host.</p>
+      <p className="page-sub">
+        État réel du runtime. Pour Macro-X Codex : déposer le paquet dans{" "}
+        <span className="mono">agents/codex-drop/macro-x</span> puis Installer.
+      </p>
       {error ? <p className="status-bad">{error}</p> : null}
       {agents.map((a) => (
         <div className="agent-row" key={a.manifest.agent_id}>
           <div>
             <strong>{a.manifest.name}</strong>
-            <div className="mono">{a.manifest.agent_id} · v{a.manifest.version}</div>
+            <div className="mono">
+              {a.manifest.agent_id} · v{a.manifest.version}
+            </div>
           </div>
           <div className={statusClass(a.status)}>{frStatus(a.status)}</div>
           <div className="mono">espace : {a.workspace}</div>
           <div className="mono">{a.last_error ?? "—"}</div>
           <div className="actions">
-            <button onClick={() => start(a.manifest.agent_id)} disabled={a.status === "NOT_INSTALLED"}>
+            <button
+              onClick={() => start(a.manifest.agent_id)}
+              disabled={a.status === "NOT_INSTALLED" || busy === a.manifest.agent_id}
+            >
               Démarrer
             </button>
-            <button onClick={() => stop(a.manifest.agent_id)}>Arrêter</button>
+            <button onClick={() => stop(a.manifest.agent_id)} disabled={busy === a.manifest.agent_id}>
+              Arrêter
+            </button>
             <button onClick={() => setSelected(a)}>Inspecter</button>
-            {a.status === "NOT_INSTALLED" ? (
-              <button className="primary">Installer le paquet agent</button>
-            ) : null}
+            <button
+              className="primary"
+              onClick={() => installPreferred(a.manifest.agent_id)}
+              disabled={busy === a.manifest.agent_id}
+            >
+              {a.status === "NOT_INSTALLED" ? "Installer le paquet agent" : "Réinstaller / mettre à jour"}
+            </button>
           </div>
         </div>
       ))}

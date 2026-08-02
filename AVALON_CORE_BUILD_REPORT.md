@@ -136,6 +136,7 @@ Platform monorepo trees, docs (`EXISTING_ARCHITECTURE_AUDIT`, `TARGET_ARCHITECTU
 ## REMAINING TASKS
 
 - Operators: load Avalon Capital Authenticode PFX into GitHub secrets (pipeline ready; unsigned until secrets present).
+- Codex: deliver real Macro-X into `agents/codex-drop/macro-x/` then `avalon-core agents install` (pipeline ready).
 - Optional SQLCipher feature flag when OpenSSL/sqlcipher vendoring validated.
 - Expand Excel COM path + DuckDB enablement.
 

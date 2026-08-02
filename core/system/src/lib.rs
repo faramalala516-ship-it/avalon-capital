@@ -19,6 +19,8 @@ pub struct PlatformPaths {
     pub logs_dir: PathBuf,
     pub cache_dir: PathBuf,
     pub backups_dir: PathBuf,
+    /// Installed agent packages (copied manifests + code), never secrets.
+    pub agents_dir: PathBuf,
 }
 
 impl PlatformPaths {
@@ -35,6 +37,7 @@ impl PlatformPaths {
         let logs_dir = data_dir.join("logs");
         let cache_dir = data_dir.join("cache");
         let backups_dir = data_dir.join("backups");
+        let agents_dir = data_dir.join("agents");
         for d in [
             &data_dir,
             &secure_dir,
@@ -42,6 +45,7 @@ impl PlatformPaths {
             &logs_dir,
             &cache_dir,
             &backups_dir,
+            &agents_dir,
         ] {
             let _ = std::fs::create_dir_all(d);
         }
@@ -56,6 +60,7 @@ impl PlatformPaths {
             logs_dir,
             cache_dir,
             backups_dir,
+            agents_dir,
         })
     }
 }

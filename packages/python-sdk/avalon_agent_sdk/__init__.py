@@ -20,6 +20,8 @@ class AvalonAgentClient:
 
     def __post_init__(self) -> None:
         self.workspace = Path(self.workspace)
+        if os.environ.get("AVALON_API_BASE"):
+            self.api_base = os.environ["AVALON_API_BASE"]
         if self.token is None:
             token_path = os.environ.get("AVALON_API_TOKEN_FILE")
             if token_path and Path(token_path).exists():

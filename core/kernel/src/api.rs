@@ -37,6 +37,7 @@ pub async fn serve_local_api(kernel: Arc<AvalonCoreKernel>, port: u16) -> Result
         .route("/health", get(health))
         .route("/v1/platform/status", get(platform_status))
         .route("/v1/agents", get(list_agents))
+        .route("/v1/agents/install", post(install_agent))
         .route("/v1/agents/{id}", get(get_agent))
         .route("/v1/agents/{id}/start", post(start_agent))
         .route("/v1/agents/{id}/stop", post(stop_agent))
@@ -85,6 +86,27 @@ async fn list_agents(
 ) -> Result<Json<Value>, StatusCode> {
     auth(&headers, &state)?;
     Ok(Json(serde_json::json!(state.kernel.agents.list())))
+}
+
+#[derive(Deserialize)]
+struct InstallBody {
+    path: String,
+}
+
+async fn install_agent(
+    State(state): State<ApiState>,
+    headers: HeaderMap,
+    Json(body): Json<InstallBody>,
+) -> Result<Json<Value>, StatusCode> {
+    auth(&headers, &state)?;
+    match state.kernel.agents.install_from_dir(std::path::Path::new(&body.path)) {
+        Ok(report) => Ok(Json(serde_json::json!(report))),
+        Err(AvalonError::InvalidManifest(_)) | Err(AvalonError::InvalidArgument(_)) => {
+            Err(StatusCode::BAD_REQUEST)
+        }
+        Err(AvalonError::PermissionDenied(_)) => Err(StatusCode::FORBIDDEN),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 
 async fn get_agent(

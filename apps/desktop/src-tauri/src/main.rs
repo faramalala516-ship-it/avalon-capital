@@ -2,11 +2,13 @@
 
 use avalon_kernel::{AvalonCoreKernel, KernelConfig};
 use avalon_security::NetworkMode;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::State;
 
 struct AppState {
     kernel: Arc<AvalonCoreKernel>,
+    agents_search_roots: Vec<PathBuf>,
 }
 
 #[tauri::command]
@@ -29,6 +31,40 @@ fn start_agent(state: State<'_, AppState>, id: String) -> Result<serde_json::Val
 fn stop_agent(state: State<'_, AppState>, id: String) -> Result<serde_json::Value, String> {
     let a = state.kernel.agents.stop(&id).map_err(|e| e.to_string())?;
     serde_json::to_value(a).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn install_agent(state: State<'_, AppState>, path: String) -> Result<serde_json::Value, String> {
+    let report = state
+        .kernel
+        .agents
+        .install_from_dir(PathBuf::from(path).as_path())
+        .map_err(|e| e.to_string())?;
+    serde_json::to_value(report).map_err(|e| e.to_string())
+}
+
+/// Install from Codex drop zone / preferred candidates for a given agent_id.
+#[tauri::command]
+fn install_agent_preferred(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<serde_json::Value, String> {
+    let mut candidates = Vec::new();
+    for root in &state.agents_search_roots {
+        candidates.push(root.join(&id));
+        candidates.push(root.join("codex-drop").join(&id));
+        candidates.push(root.join("templates").join(format!("{id}-mock")));
+        candidates.push(root.join("templates").join(&id));
+    }
+    // Also LocalAppData incoming drop
+    candidates.push(state.kernel.paths.agents_dir.join("incoming").join(&id));
+
+    let report = state
+        .kernel
+        .agents
+        .install_first_available(&candidates)
+        .map_err(|e| e.to_string())?;
+    serde_json::to_value(report).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -64,6 +100,34 @@ fn complete_first_run(state: State<'_, AppState>) -> Result<(), String> {
     std::fs::write(marker, b"1").map_err(|e| e.to_string())
 }
 
+fn agents_repo_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../../agents")
+}
+
+fn bootstrap_macro_x(kernel: &AvalonCoreKernel, search_roots: &[PathBuf]) {
+    let mut candidates = Vec::new();
+    for root in search_roots {
+        // Codex delivery first, then real package, then mock fallback
+        candidates.push(root.join("codex-drop/macro-x"));
+        candidates.push(root.join("macro-x"));
+        candidates.push(root.join("templates/macro-x-mock"));
+    }
+    candidates.push(kernel.paths.agents_dir.join("incoming/macro-x"));
+
+    if kernel.agents.install_first_available(&candidates).is_ok() {
+        return;
+    }
+
+    // Last-resort: register mock manifest without copy if templates exist in-tree
+    let mock = agents_repo_root().join("templates/macro-x-mock");
+    if let Ok(raw) = std::fs::read_to_string(mock.join("avalon-agent.json")) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+            let _ = kernel.agents.register_manifest(&v);
+            let _ = kernel.agents.set_install_root("macro-x", mock);
+        }
+    }
+}
+
 fn main() {
     tracing_subscriber::fmt()
         .with_env_filter("info")
@@ -78,30 +142,29 @@ fn main() {
     })
     .expect("failed to bootstrap Avalon Core");
 
+    let search_roots = vec![agents_repo_root()];
+
     let hello = include_str!("../../../../agents/templates/hello-avalon/avalon-agent.json");
     if let Ok(v) = serde_json::from_str::<serde_json::Value>(hello) {
         let _ = kernel.agents.register_manifest(&v);
-        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../../agents/templates/hello-avalon");
+        let root = agents_repo_root().join("templates/hello-avalon");
         let _ = kernel.agents.set_install_root("hello-avalon", root);
     }
-    let macrox = include_str!("../../../../agents/templates/macro-x-mock/avalon-agent.json");
-    if let Ok(v) = serde_json::from_str::<serde_json::Value>(macrox) {
-        let _ = kernel.agents.register_manifest(&v);
-        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../../agents/templates/macro-x-mock");
-        let _ = kernel.agents.set_install_root("macro-x", root);
-    }
+
+    bootstrap_macro_x(&kernel, &search_roots);
 
     tauri::Builder::default()
         .manage(AppState {
             kernel: kernel.clone(),
+            agents_search_roots: search_roots,
         })
         .invoke_handler(tauri::generate_handler![
             platform_status,
             list_agents,
             start_agent,
             stop_agent,
+            install_agent,
+            install_agent_preferred,
             list_events,
             security_status,
             set_network_mode,

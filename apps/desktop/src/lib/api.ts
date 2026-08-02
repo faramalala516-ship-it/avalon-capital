@@ -67,6 +67,13 @@ export async function fetchJson<T>(path: string, init: RequestInit = {}): Promis
       const id = path.split("/")[3];
       return await invoke<T>("stop_agent", { id });
     }
+    if (path === "/v1/agents/install" && init.method === "POST") {
+      const body = JSON.parse(String(init.body ?? "{}"));
+      if (body.path) {
+        return await invoke<T>("install_agent", { path: body.path });
+      }
+      return await invoke<T>("install_agent_preferred", { id: body.agent_id ?? "macro-x" });
+    }
     if (path === "/v1/network/mode" && init.method === "POST") {
       const body = JSON.parse(String(init.body ?? "{}"));
       return await invoke<T>("set_network_mode", { mode: body.mode });

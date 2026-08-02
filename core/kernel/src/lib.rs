@@ -89,12 +89,18 @@ impl AvalonCoreKernel {
         let network = Arc::new(NetworkBroker::new(permissions.clone(), audit.clone()));
         network.set_mode(config.network_mode);
         let workspaces = Arc::new(WorkspaceManager::new(&paths.workspace_dir)?);
-        let agents = Arc::new(AgentRuntimeManager::new(
-            workspaces.clone(),
-            events.clone(),
-            audit.clone(),
-            permissions.clone(),
-        ));
+        let token_file = paths.data_dir.join("api.token");
+        let api_base = format!("http://127.0.0.1:{}", config.api_port);
+        let agents = Arc::new(
+            AgentRuntimeManager::new(
+                workspaces.clone(),
+                events.clone(),
+                audit.clone(),
+                permissions.clone(),
+                paths.agents_dir.clone(),
+            )
+            .with_api_context(api_base, Some(token_file)),
+        );
         let tools = Arc::new(ToolRegistry::new());
         let models = Arc::new(ModelRegistry::new());
         let prompts = Arc::new(PromptRegistry::new());
@@ -154,10 +160,11 @@ impl AvalonCoreKernel {
             None,
         );
 
-        // Placeholders
+        // Placeholders (overwritten when a real package is discovered/installed)
         agents.register_placeholder("macro-x", "Macro-X");
         agents.register_placeholder("gem-trade", "Gem-Trade");
         agents.register_placeholder("metaquant-sigma", "MetaQuant Sigma");
+        let _ = agents.discover_installed();
 
         let kernel = Arc::new(Self {
             paths,

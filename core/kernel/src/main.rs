@@ -28,6 +28,22 @@ enum Commands {
     Status,
     /// Run self-check / smoke validation
     SelfTest,
+    /// Agent package operations (Codex / operators)
+    Agents {
+        #[command(subcommand)]
+        command: AgentCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum AgentCommands {
+    /// Install an agent package directory containing avalon-agent.json
+    Install {
+        /// Path to agent package root (e.g. agents/codex-drop/macro-x)
+        path: PathBuf,
+    },
+    /// List registered agents
+    List,
 }
 
 #[tokio::main]
@@ -79,6 +95,17 @@ async fn main() -> anyhow::Result<()> {
             run_self_test(kernel.clone()).await?;
             kernel.shutdown()?;
         }
+        Commands::Agents { command } => match command {
+            AgentCommands::Install { path } => {
+                let report = kernel.agents.install_from_dir(&path)?;
+                println!("{}", serde_json::to_string_pretty(&report)?);
+                kernel.shutdown()?;
+            }
+            AgentCommands::List => {
+                println!("{}", serde_json::to_string_pretty(&kernel.agents.list())?);
+                kernel.shutdown()?;
+            }
+        },
     }
     Ok(())
 }
