@@ -31,14 +31,28 @@ if (Test-Path $incoming) {
 New-Item -ItemType Directory -Force -Path $incoming | Out-Null
 
 Write-Host "Copie $SourceDir -> $incoming"
-Get-ChildItem $SourceDir -Recurse -File | Where-Object {
-  $_.FullName -notmatch '\\.git\\' -and $_.Name -notmatch '\.pyc$' -and $_.FullName -notmatch '__pycache__'
-} | ForEach-Object {
-  $rel = $_.FullName.Substring($SourceDir.Length).TrimStart('\')
-  $dest = Join-Path $incoming $rel
-  New-Item -ItemType Directory -Force -Path (Split-Path $dest -Parent) | Out-Null
-  Copy-Item $_.FullName $dest -Force
+# Prefer robocopy for reliable recursive copy on Windows
+$null = New-Item -ItemType Directory -Force -Path $incoming
+robocopy $SourceDir $incoming /E /NFL /NDL /NJH /NJS /nc /ns /np /XD .git __pycache__ .pytest_cache /XF *.pyc | Out-Null
+$rc = $LASTEXITCODE
+if ($rc -ge 8) {
+  # Fallback to Copy-Item
+  Get-ChildItem $SourceDir -Recurse -File | Where-Object {
+    $_.FullName -notmatch '\\.git\\' -and $_.Name -notmatch '\.pyc$' -and $_.FullName -notmatch '__pycache__'
+  } | ForEach-Object {
+    $rel = $_.FullName.Substring($SourceDir.Length).TrimStart('\')
+    $dest = Join-Path $incoming $rel
+    New-Item -ItemType Directory -Force -Path (Split-Path $dest -Parent) | Out-Null
+    Copy-Item $_.FullName $dest -Force
+  }
 }
+
+$manifestOk = Test-Path (Join-Path $incoming "avalon-agent.json")
+$mainOk = Test-Path (Join-Path $incoming "main.py")
+if (-not $manifestOk -or -not $mainOk) {
+  throw "Paquet incomplet dans $incoming (avalon-agent.json=$manifestOk main.py=$mainOk)"
+}
+Write-Host "OK fichiers:" (Get-ChildItem $incoming -File | ForEach-Object { $_.Name }) -Separator ', '
 
 # Optional validate with Windows Python
 $py = Get-Command python -ErrorAction SilentlyContinue

@@ -2,9 +2,9 @@
   "schema_version": 1,
   "agent_id": "macro-x",
   "name": "Macro-X",
-  "version": "0.2.0-codex",
+  "version": "0.3.0-codex",
   "publisher": "Avalon Capital",
-  "description": "Macro-X agent package for Codex delivery — extend business logic here, never in Avalon Core",
+  "description": "Macro-X Codex delivery — broker-mediated FRED cycle, INSUFFICIENT_EVIDENCE when no data, local LLM only",
   "runtime": "python",
   "entrypoint": "main.py",
   "permissions": [
@@ -39,7 +39,7 @@
     ],
     "subscribes": ["data.updated", "system.started"]
   },
-  "capabilities": ["macro", "excel", "charts", "local-llm"],
+  "capabilities": ["macro", "excel", "charts", "local-llm", "fred-broker"],
   "minimum_core_version": "0.1.0",
   "model_policy": { "local_only_ok": true }
 }
