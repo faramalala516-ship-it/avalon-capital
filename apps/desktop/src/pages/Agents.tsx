@@ -66,10 +66,11 @@ export default function Agents() {
       });
       await load();
     } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
       setError(
-        e instanceof Error
-          ? e.message
-          : "Installation impossible — déposez le paquet Codex dans agents/codex-drop/" + id
+        `Installation impossible (${detail}). ` +
+          `Déposez le paquet dans %LOCALAPPDATA%\\Avalon Capital\\Agentique Platform\\agents\\incoming\\${id} ` +
+          `puis réessayez (ou lancez .\\scripts\\install-agent-windows.ps1).`
       );
     } finally {
       setBusy(null);
@@ -80,8 +81,9 @@ export default function Agents() {
     <>
       <h1 className="page-title">Centre de contrôle des agents</h1>
       <p className="page-sub">
-        État réel du runtime. Pour Macro-X Codex : déposer le paquet dans{" "}
-        <span className="mono">agents/codex-drop/macro-x</span> puis Installer.
+        État réel du runtime. Macro-X : copier le paquet dans{" "}
+        <span className="mono">%LOCALAPPDATA%\Avalon Capital\Agentique Platform\agents\incoming\macro-x</span>
+        {" "}puis cliquer Installer (ou <span className="mono">.\scripts\install-agent-windows.ps1</span>).
       </p>
       {error ? <p className="status-bad">{error}</p> : null}
       {agents.map((a) => (

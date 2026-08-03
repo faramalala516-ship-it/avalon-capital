@@ -30,6 +30,10 @@ export type PlatformStatus = {
 
 const API_BASE = import.meta.env.VITE_AVALON_API ?? "http://127.0.0.1:8741";
 
+function isTauriRuntime(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
 async function token(): Promise<string | null> {
   // Tauri command may provide token; browser/dev reads from localStorage after first fetch helper
   return localStorage.getItem("avalon_api_token");
@@ -41,45 +45,50 @@ export async function fetchJson<T>(path: string, init: RequestInit = {}): Promis
   const t = await token();
   if (t) headers.set("x-avalon-token", t);
 
-  // Prefer Tauri invoke when available
-  try {
+  // Prefer Tauri invoke when available — do NOT fall through to HTTP on invoke errors
+  // (desktop binds API off; a failed install would otherwise become opaque "Failed to fetch").
+  if (isTauriRuntime()) {
     const { invoke } = await import("@tauri-apps/api/core");
-    if (path === "/v1/platform/status") {
-      return await invoke<T>("platform_status");
-    }
-    if (path === "/v1/agents") {
-      return await invoke<T>("list_agents");
-    }
-    if (path === "/v1/events") {
-      return await invoke<T>("list_events");
-    }
-    if (path === "/v1/matrix") {
-      return await invoke<T>("matrix");
-    }
-    if (path === "/v1/security/status") {
-      return await invoke<T>("security_status");
-    }
-    if (path.startsWith("/v1/agents/") && path.endsWith("/start") && init.method === "POST") {
-      const id = path.split("/")[3];
-      return await invoke<T>("start_agent", { id });
-    }
-    if (path.startsWith("/v1/agents/") && path.endsWith("/stop") && init.method === "POST") {
-      const id = path.split("/")[3];
-      return await invoke<T>("stop_agent", { id });
-    }
-    if (path === "/v1/agents/install" && init.method === "POST") {
-      const body = JSON.parse(String(init.body ?? "{}"));
-      if (body.path) {
-        return await invoke<T>("install_agent", { path: body.path });
+    try {
+      if (path === "/v1/platform/status") {
+        return await invoke<T>("platform_status");
       }
-      return await invoke<T>("install_agent_preferred", { id: body.agent_id ?? "macro-x" });
+      if (path === "/v1/agents") {
+        return await invoke<T>("list_agents");
+      }
+      if (path === "/v1/events") {
+        return await invoke<T>("list_events");
+      }
+      if (path === "/v1/matrix") {
+        return await invoke<T>("matrix");
+      }
+      if (path === "/v1/security/status") {
+        return await invoke<T>("security_status");
+      }
+      if (path.startsWith("/v1/agents/") && path.endsWith("/start") && init.method === "POST") {
+        const id = path.split("/")[3];
+        return await invoke<T>("start_agent", { id });
+      }
+      if (path.startsWith("/v1/agents/") && path.endsWith("/stop") && init.method === "POST") {
+        const id = path.split("/")[3];
+        return await invoke<T>("stop_agent", { id });
+      }
+      if (path === "/v1/agents/install" && init.method === "POST") {
+        const body = JSON.parse(String(init.body ?? "{}"));
+        if (body.path) {
+          return await invoke<T>("install_agent", { path: body.path });
+        }
+        return await invoke<T>("install_agent_preferred", { id: body.agent_id ?? "macro-x" });
+      }
+      if (path === "/v1/network/mode" && init.method === "POST") {
+        const body = JSON.parse(String(init.body ?? "{}"));
+        return await invoke<T>("set_network_mode", { mode: body.mode });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(msg || `Échec commande Tauri pour ${path}`);
     }
-    if (path === "/v1/network/mode" && init.method === "POST") {
-      const body = JSON.parse(String(init.body ?? "{}"));
-      return await invoke<T>("set_network_mode", { mode: body.mode });
-    }
-  } catch {
-    // fall through to HTTP local API
+    throw new Error(`Commande Tauri non câblée pour ${path}`);
   }
 
   const resp = await fetch(`${API_BASE}${path}`, { ...init, headers });
