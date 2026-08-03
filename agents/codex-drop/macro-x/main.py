@@ -50,7 +50,7 @@ except ImportError as e:  # pragma: no cover
     raise SystemExit(2) from e
 
 SERIES = ("UNRATE", "CPIAUCSL", "FEDFUNDS")
-VERSION = "0.3.1-codex"
+VERSION = "0.3.2-codex"
 
 
 def _utc_now() -> str:
@@ -222,6 +222,8 @@ def run_macro_cycle(client: AvalonAgentClient) -> dict[str, Any]:
 
 
 def main() -> int:
+    import time
+
     agent_id = os.environ.get("AVALON_AGENT_ID", "macro-x")
     workspace = Path(os.environ.get("AVALON_WORKSPACE", "."))
     client = AvalonAgentClient(agent_id=agent_id, workspace=workspace)
@@ -233,9 +235,22 @@ def main() -> int:
     client.report_health("ok", detail="macro-x codex package running")
     client.subscribe("data.updated")
     client.subscribe("system.started")
+
+    # One evidence cycle, then stay alive until Avalon Agent Host stops the process.
     result = run_macro_cycle(client)
-    print(json.dumps(result, ensure_ascii=False))
-    return 0
+    print(json.dumps(result, ensure_ascii=False), flush=True)
+
+    heartbeat = max(5, int(os.environ.get("AVALON_AGENT_HEARTBEAT_SECS", "30")))
+    once = os.environ.get("AVALON_AGENT_ONCE", "").strip() in {"1", "true", "yes"}
+    if once:
+        return 0
+
+    while True:
+        client.report_health(
+            "ok",
+            detail=f"macro-x idle; last_evidence={result.get('evidence')}",
+        )
+        time.sleep(heartbeat)
 
 
 if __name__ == "__main__":

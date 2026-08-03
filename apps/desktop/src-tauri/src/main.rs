@@ -1,10 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use avalon_kernel::{AvalonCoreKernel, KernelConfig};
+use avalon_kernel::{serve_local_api, AvalonCoreKernel, KernelConfig};
 use avalon_security::NetworkMode;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::State;
+use tauri::{Manager, State};
 
 struct AppState {
     kernel: Arc<AvalonCoreKernel>,
@@ -43,22 +43,13 @@ fn install_agent(state: State<'_, AppState>, path: String) -> Result<serde_json:
     serde_json::to_value(report).map_err(|e| e.to_string())
 }
 
-/// Install from Codex drop zone / preferred candidates for a given agent_id.
+/// Install from bundled resources / Codex drop / LocalAppData incoming.
 #[tauri::command]
 fn install_agent_preferred(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<serde_json::Value, String> {
-    let mut candidates = Vec::new();
-    for root in &state.agents_search_roots {
-        candidates.push(root.join(&id));
-        candidates.push(root.join("codex-drop").join(&id));
-        candidates.push(root.join("templates").join(format!("{id}-mock")));
-        candidates.push(root.join("templates").join(&id));
-    }
-    // Also LocalAppData incoming drop
-    candidates.push(state.kernel.paths.agents_dir.join("incoming").join(&id));
-
+    let candidates = preferred_candidates(&state.agents_search_roots, &state.kernel, &id);
     let report = state
         .kernel
         .agents
@@ -102,32 +93,48 @@ fn complete_first_run(state: State<'_, AppState>) -> Result<(), String> {
 
 fn agents_repo_root() -> PathBuf {
     // CARGO_MANIFEST_DIR = apps/desktop/src-tauri → ../../../agents = repo/agents
-    // (include_str! from src/main.rs still needs ../../../../agents — different base)
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../agents")
 }
 
-fn bootstrap_macro_x(kernel: &AvalonCoreKernel, search_roots: &[PathBuf]) {
+fn preferred_candidates(
+    search_roots: &[PathBuf],
+    kernel: &AvalonCoreKernel,
+    id: &str,
+) -> Vec<PathBuf> {
     let mut candidates = Vec::new();
     for root in search_roots {
-        // Codex delivery first, then real package, then mock fallback
-        candidates.push(root.join("codex-drop/macro-x"));
-        candidates.push(root.join("macro-x"));
-        candidates.push(root.join("templates/macro-x-mock"));
+        candidates.push(root.join("codex-drop").join(id));
+        candidates.push(root.join(id));
+        candidates.push(root.join("templates").join(format!("{id}-mock")));
+        candidates.push(root.join("templates").join(id));
     }
-    candidates.push(kernel.paths.agents_dir.join("incoming/macro-x"));
+    candidates.push(kernel.paths.agents_dir.join("incoming").join(id));
+    candidates
+}
 
-    if kernel.agents.install_first_available(&candidates).is_ok() {
-        return;
-    }
-
-    // Last-resort: register mock manifest without copy if templates exist in-tree
-    let mock = agents_repo_root().join("templates/macro-x-mock");
-    if let Ok(raw) = std::fs::read_to_string(mock.join("avalon-agent.json")) {
-        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
-            let _ = kernel.agents.register_manifest(&v);
-            let _ = kernel.agents.set_install_root("macro-x", mock);
+fn bootstrap_agents(kernel: &AvalonCoreKernel, search_roots: &[PathBuf]) {
+    // Macro-X: prefer Codex/bundled package
+    let macro_candidates = preferred_candidates(search_roots, kernel, "macro-x");
+    if kernel.agents.install_first_available(&macro_candidates).is_err() {
+        let mock = agents_repo_root().join("templates/macro-x-mock");
+        if mock.join("avalon-agent.json").is_file() {
+            if let Ok(raw) = std::fs::read_to_string(mock.join("avalon-agent.json")) {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+                    let _ = kernel.agents.register_manifest(&v);
+                    let _ = kernel.agents.set_install_root("macro-x", mock);
+                }
+            }
         }
     }
+
+    // Hello Avalon demo package
+    let hello_candidates = preferred_candidates(search_roots, kernel, "hello-avalon");
+    // templates/hello-avalon is under search roots as templates/hello-avalon
+    let mut hello = hello_candidates;
+    for root in search_roots {
+        hello.insert(0, root.join("templates/hello-avalon"));
+    }
+    let _ = kernel.agents.install_first_available(&hello);
 }
 
 fn main() {
@@ -135,30 +142,51 @@ fn main() {
         .with_env_filter("info")
         .init();
 
+    let api_port: u16 = 8741;
     let kernel = AvalonCoreKernel::bootstrap(KernelConfig {
         data_dir: None,
         network_mode: NetworkMode::OfflineLock,
-        bind_api: false,
-        api_port: 8741,
+        bind_api: true,
+        api_port,
         dev_mode: cfg!(debug_assertions),
     })
     .expect("failed to bootstrap Avalon Core");
 
-    let search_roots = vec![agents_repo_root()];
-
-    let hello = include_str!("../../../../agents/templates/hello-avalon/avalon-agent.json");
-    if let Ok(v) = serde_json::from_str::<serde_json::Value>(hello) {
-        let _ = kernel.agents.register_manifest(&v);
-        let root = agents_repo_root().join("templates/hello-avalon");
-        let _ = kernel.agents.set_install_root("hello-avalon", root);
-    }
-
-    bootstrap_macro_x(&kernel, &search_roots);
+    // Start local authenticated API so agents can call Core (token file written here)
+    let api_kernel = kernel.clone();
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .expect("tokio runtime for Avalon API");
+        if let Err(e) = rt.block_on(serve_local_api(api_kernel, api_port)) {
+            tracing::error!("Avalon local API exited: {e}");
+        }
+    });
+    // Brief wait so api.token exists before first agent start from UI
+    std::thread::sleep(std::time::Duration::from_millis(500));
 
     tauri::Builder::default()
-        .manage(AppState {
-            kernel: kernel.clone(),
-            agents_search_roots: search_roots,
+        .setup(move |app| {
+            let mut search_roots = vec![agents_repo_root()];
+            // Bundled resources (NSIS/MSI): resource_dir/agents/...
+            if let Ok(res) = app.path().resource_dir() {
+                let bundled = res.join("agents");
+                if bundled.is_dir() {
+                    search_roots.insert(0, bundled);
+                }
+                // Some Tauri layouts nest resources under _up_
+                let nested = res.join("_up_").join("agents");
+                if nested.is_dir() {
+                    search_roots.insert(0, nested);
+                }
+            }
+            bootstrap_agents(&kernel, &search_roots);
+            app.manage(AppState {
+                kernel: kernel.clone(),
+                agents_search_roots: search_roots,
+            });
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             platform_status,
@@ -175,6 +203,4 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error running Avalon desktop");
-
-    let _ = kernel.shutdown();
 }

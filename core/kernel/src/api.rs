@@ -90,7 +90,10 @@ async fn list_agents(
 
 #[derive(Deserialize)]
 struct InstallBody {
-    path: String,
+    /// Absolute/relative path to an agent package directory.
+    path: Option<String>,
+    /// Install by agent id from LocalAppData incoming drop zone.
+    agent_id: Option<String>,
 }
 
 async fn install_agent(
@@ -99,7 +102,18 @@ async fn install_agent(
     Json(body): Json<InstallBody>,
 ) -> Result<Json<Value>, StatusCode> {
     auth(&headers, &state)?;
-    match state.kernel.agents.install_from_dir(std::path::Path::new(&body.path)) {
+    let result = if let Some(path) = body.path.as_deref().filter(|p| !p.is_empty()) {
+        state.kernel.agents.install_from_dir(std::path::Path::new(path))
+    } else if let Some(id) = body.agent_id.as_deref().filter(|p| !p.is_empty()) {
+        let candidates = vec![
+            state.kernel.paths.agents_dir.join("incoming").join(id),
+            state.kernel.paths.agents_dir.join(id),
+        ];
+        state.kernel.agents.install_first_available(&candidates)
+    } else {
+        return Err(StatusCode::BAD_REQUEST);
+    };
+    match result {
         Ok(report) => Ok(Json(serde_json::json!(report))),
         Err(AvalonError::InvalidManifest(_)) | Err(AvalonError::InvalidArgument(_)) => {
             Err(StatusCode::BAD_REQUEST)

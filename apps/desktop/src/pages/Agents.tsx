@@ -32,6 +32,10 @@ export default function Agents() {
 
   useEffect(() => {
     void load();
+    const t = window.setInterval(() => {
+      void load();
+    }, 4000);
+    return () => window.clearInterval(t);
   }, []);
 
   async function start(id: string) {
@@ -81,9 +85,10 @@ export default function Agents() {
     <>
       <h1 className="page-title">Centre de contrôle des agents</h1>
       <p className="page-sub">
-        État réel du runtime. Macro-X : copier le paquet dans{" "}
-        <span className="mono">%LOCALAPPDATA%\Avalon Capital\Agentique Platform\agents\incoming\macro-x</span>
-        {" "}puis cliquer Installer (ou <span className="mono">.\scripts\install-agent-windows.ps1</span>).
+        Runtime réel. Macro-X est bundlé dans l’installeur — cliquez{" "}
+        <strong>Installer / mettre à jour</strong> puis <strong>Démarrer</strong>.
+        (Python 3 requis. Option Codex :{" "}
+        <span className="mono">.\scripts\INSTALL-MACRO-X.bat</span>)
       </p>
       {error ? <p className="status-bad">{error}</p> : null}
       {agents.map((a) => (

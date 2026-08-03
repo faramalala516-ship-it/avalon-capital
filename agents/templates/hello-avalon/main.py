@@ -8,9 +8,15 @@ import os
 import sys
 from pathlib import Path
 
-# Prefer local SDK package
-ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "packages" / "python-sdk"))
+_HERE = Path(__file__).resolve().parent
+_VENDOR = _HERE / "vendor"
+if _VENDOR.is_dir():
+    sys.path.insert(0, str(_VENDOR))
+else:
+    root = _HERE.parents[2] if len(_HERE.parents) > 2 else _HERE
+    sdk = root / "packages" / "python-sdk"
+    if sdk.is_dir():
+        sys.path.insert(0, str(sdk))
 
 from avalon_agent_sdk import AvalonAgentClient  # noqa: E402
 
@@ -33,7 +39,6 @@ def main() -> int:
     out.write_text("Hello Avalon\n", encoding="utf-8")
     client.create_artifact("hello.txt", str(out))
 
-    # Demonstrate permission denied path (raw shell must fail)
     denied = client.request_permission("shell.raw")
     assert denied is False, "shell.raw must be denied"
 
