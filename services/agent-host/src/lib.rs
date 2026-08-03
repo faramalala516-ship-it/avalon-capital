@@ -58,6 +58,19 @@ pub struct AgentInstallReport {
 struct LiveAgent {
     info: AgentInstance,
     child: Option<Child>,
+    /// When true, process exit is expected (user/API stop) and must not auto-restart.
+    intentional_stop: bool,
+    /// Consecutive automatic restarts after unexpected exits (daemon lifecycle).
+    restart_count: u32,
+}
+
+const MAX_DAEMON_RESTARTS: u32 = 8;
+
+fn lifecycle_is_daemon(manifest: &AgentManifest) -> bool {
+    matches!(
+        manifest.lifecycle.as_deref(),
+        Some("daemon") | Some("long_running")
+    )
 }
 
 #[derive(Debug, Clone)]
@@ -261,6 +274,8 @@ impl AgentRuntimeManager {
             LiveAgent {
                 info: instance.clone(),
                 child: None,
+                intentional_stop: false,
+                restart_count: 0,
             },
         );
         let _ = self.events.publish(EventBus::system_event(
@@ -294,6 +309,7 @@ impl AgentRuntimeManager {
             resource_limits: serde_json::json!({}),
             healthcheck: serde_json::json!({}),
             api_contracts: serde_json::json!({}),
+            lifecycle: None,
         };
         let instance = AgentInstance {
             manifest,
@@ -310,6 +326,8 @@ impl AgentRuntimeManager {
             LiveAgent {
                 info: instance,
                 child: None,
+                intentional_stop: false,
+                restart_count: 0,
             },
         );
     }
@@ -524,6 +542,11 @@ impl AgentRuntimeManager {
             return Ok(live.info.clone());
         }
 
+        // User-initiated start (not an in-flight auto-restart) resets the restart budget.
+        if live.info.status != AgentStatus::Starting {
+            live.restart_count = 0;
+        }
+        live.intentional_stop = false;
         live.info.status = AgentStatus::Starting;
         let entry = live.info.manifest.entrypoint.clone();
         let runtime = live.info.manifest.runtime.clone();
@@ -549,19 +572,31 @@ impl AgentRuntimeManager {
                 live.info.pid = None;
                 return Err(AvalonError::AgentUnavailable(msg));
             }
+            let meta = workspace.join("metadata");
+            let _ = fs::create_dir_all(&meta);
+            let stderr_path = meta.join("agent.stderr.log");
+            let stderr_file = fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&stderr_path)
+                .ok();
             let mut cmd = Command::new(&self.python.program);
             for a in &self.python.prefix_args {
                 cmd.arg(a);
             }
-            cmd.arg(&script)
-                .current_dir(&install)
-                .env("AVALON_AGENT_ID", agent_id)
+            // Unbuffered Python so heartbeats/logs flush under supervised spawn.
+            cmd.arg("-u").arg(&script).current_dir(&install);
+            cmd.env("AVALON_AGENT_ID", agent_id)
                 .env("AVALON_WORKSPACE", workspace.to_string_lossy().as_ref())
                 .env("AVALON_API_BASE", &api_base)
                 .stdin(Stdio::null())
                 // Avoid pipe-buffer deadlock: agents persist outputs in workspace files
-                .stdout(Stdio::null())
-                .stderr(Stdio::piped());
+                .stdout(Stdio::null());
+            if let Some(f) = stderr_file {
+                cmd.stderr(Stdio::from(f));
+            } else {
+                cmd.stderr(Stdio::null());
+            }
             if let Some(tf) = token_file {
                 cmd.env("AVALON_API_TOKEN_FILE", tf);
             }
@@ -624,6 +659,8 @@ impl AgentRuntimeManager {
         let live = agents
             .get_mut(agent_id)
             .ok_or_else(|| AvalonError::AgentUnavailable(agent_id.into()))?;
+        live.intentional_stop = true;
+        live.restart_count = 0;
         if let Some(mut child) = live.child.take() {
             let _ = child.kill();
             let _ = child.wait();
@@ -645,6 +682,7 @@ impl AgentRuntimeManager {
         let live = agents
             .get_mut(agent_id)
             .ok_or_else(|| AvalonError::AgentUnavailable(agent_id.into()))?;
+        live.intentional_stop = true;
         if let Some(mut child) = live.child.take() {
             let _ = child.kill();
         }
@@ -668,32 +706,61 @@ impl AgentRuntimeManager {
     }
 
     pub fn poll(&self) {
-        let mut agents = self.agents.write();
-        for (id, live) in agents.iter_mut() {
-            if let Some(child) = live.child.as_mut() {
-                match child.try_wait() {
-                    Ok(Some(status)) => {
-                        live.child = None;
-                        live.info.pid = None;
-                        if status.success() {
-                            live.info.status = AgentStatus::Stopped;
-                        } else {
-                            live.info.status = AgentStatus::Crashed;
-                            live.info.last_error = Some(format!("exit {status}"));
-                            let _ = self.events.publish(EventBus::system_event(
-                                "agent.failed",
-                                "agent-host",
-                                serde_json::json!({"agent_id": id, "exit": format!("{status}")}),
-                            ));
+        let mut restart_ids: Vec<String> = Vec::new();
+        {
+            let mut agents = self.agents.write();
+            for (id, live) in agents.iter_mut() {
+                if let Some(child) = live.child.as_mut() {
+                    match child.try_wait() {
+                        Ok(Some(status)) => {
+                            live.child = None;
+                            live.info.pid = None;
+                            if live.intentional_stop {
+                                live.info.status = AgentStatus::Stopped;
+                                live.intentional_stop = false;
+                                continue;
+                            }
+                            let daemon = lifecycle_is_daemon(&live.info.manifest);
+                            if daemon && live.restart_count < MAX_DAEMON_RESTARTS {
+                                live.restart_count += 1;
+                                live.info.status = AgentStatus::Starting;
+                                live.info.last_error = Some(format!(
+                                    "daemon exited ({status}); auto-restart {}/{}",
+                                    live.restart_count, MAX_DAEMON_RESTARTS
+                                ));
+                                let _ = self.events.publish(EventBus::system_event(
+                                    "agent.restarting",
+                                    "agent-host",
+                                    serde_json::json!({
+                                        "agent_id": id,
+                                        "exit": format!("{status}"),
+                                        "restart": live.restart_count
+                                    }),
+                                ));
+                                restart_ids.push(id.clone());
+                            } else if status.success() {
+                                live.info.status = AgentStatus::Stopped;
+                            } else {
+                                live.info.status = AgentStatus::Crashed;
+                                live.info.last_error = Some(format!("exit {status}"));
+                                let _ = self.events.publish(EventBus::system_event(
+                                    "agent.failed",
+                                    "agent-host",
+                                    serde_json::json!({"agent_id": id, "exit": format!("{status}")}),
+                                ));
+                            }
                         }
-                    }
-                    Ok(None) => {}
-                    Err(e) => {
-                        live.info.status = AgentStatus::Failed;
-                        live.info.last_error = Some(e.to_string());
+                        Ok(None) => {}
+                        Err(e) => {
+                            live.info.status = AgentStatus::Failed;
+                            live.info.last_error = Some(e.to_string());
+                        }
                     }
                 }
             }
+        }
+        for id in restart_ids {
+            let _ = self.start(&id);
         }
     }
 
@@ -761,6 +828,71 @@ mod tests {
         let agent = host.get("macro-x").unwrap();
         assert_eq!(agent.status, AgentStatus::Registered);
         assert!(agent.install_root.is_some());
+    }
+
+    #[test]
+    fn daemon_lifecycle_auto_restarts_after_exit() {
+        let tmp = tempdir().unwrap();
+        let ws = Arc::new(WorkspaceManager::new(tmp.path().join("ws")).unwrap());
+        let audit = Arc::new(AuditLedger::open(tmp.path().join("audit.jsonl")).unwrap());
+        let perms = Arc::new(PermissionEngine::new(audit.clone()));
+        let events = Arc::new(EventBus::new(100));
+        let host = AgentRuntimeManager::new(
+            ws,
+            events,
+            audit,
+            perms,
+            tmp.path().join("installed"),
+        );
+
+        let pkg = tmp.path().join("daemon-pkg");
+        fs::create_dir_all(&pkg).unwrap();
+        fs::write(
+            pkg.join("avalon-agent.json"),
+            r#"{
+              "schema_version": 1,
+              "agent_id": "pulse",
+              "name": "Pulse",
+              "version": "1.0.0",
+              "runtime": "python",
+              "entrypoint": "main.py",
+              "lifecycle": "daemon",
+              "permissions": ["filesystem.write.workspace"]
+            }"#,
+        )
+        .unwrap();
+        // Exit immediately — host must respawn daemon agents.
+        fs::write(pkg.join("main.py"), "raise SystemExit(0)\n").unwrap();
+
+        host.install_from_dir(&pkg).unwrap();
+        let started = host.start("pulse").unwrap();
+        assert_eq!(started.status, AgentStatus::Running);
+
+        let mut saw_restart = false;
+        for _ in 0..40 {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+            let agent = host.get("pulse").unwrap();
+            if agent
+                .last_error
+                .as_deref()
+                .unwrap_or("")
+                .contains("auto-restart")
+            {
+                saw_restart = true;
+            }
+            if agent.status == AgentStatus::Running && saw_restart {
+                break;
+            }
+        }
+        let agent = host.get("pulse").unwrap();
+        assert!(
+            saw_restart,
+            "expected daemon auto-restart, last_error={:?}",
+            agent.last_error
+        );
+        let _ = host.stop("pulse");
+        let stopped = host.get("pulse").unwrap();
+        assert_eq!(stopped.status, AgentStatus::Stopped);
     }
 
     #[test]

@@ -1,15 +1,8 @@
 #!/usr/bin/env python3
-"""Macro-X — agent Avalon livré par Codex.
+"""Macro-X — agent Avalon livré par Codex (daemon).
 
-Cycle brokerisé :
-  1) demande séries FRED via le Kernel / tools
-  2) audit local dans le workspace isolé
-  3) publie le régime macro
-  4) génère un brief
-  5) appelle uniquement le LLM Gateway local
-
-Sans données Broker exploitables → INSUFFICIENT_EVIDENCE
-(aucune direction de marché inventée).
+Cycle brokerisé puis heartbeat permanent jusqu'à stop par Avalon Agent Host.
+Sans données Broker → INSUFFICIENT_EVIDENCE (aucune direction inventée).
 """
 
 from __future__ import annotations
@@ -17,21 +10,17 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-# SDK resolution order (Windows install-safe):
-# 1) vendor/ next to this package (shipped with Codex drop)
-# 2) monorepo packages/python-sdk when developing in-tree
-# 3) PYTHONPATH / site-packages
 _HERE = Path(__file__).resolve().parent
 _VENDOR = _HERE / "vendor"
 if _VENDOR.is_dir():
     sys.path.insert(0, str(_VENDOR))
 else:
-    _REPO = _HERE.parents[2] if len(_HERE.parents) > 2 else _HERE
-    # agents/codex-drop/macro-x -> repo root is parents[3]
     for candidate in (
         _HERE.parents[3] / "packages" / "python-sdk" if len(_HERE.parents) > 3 else None,
         _HERE.parents[2] / "packages" / "python-sdk" if len(_HERE.parents) > 2 else None,
@@ -50,7 +39,7 @@ except ImportError as e:  # pragma: no cover
     raise SystemExit(2) from e
 
 SERIES = ("UNRATE", "CPIAUCSL", "FEDFUNDS")
-VERSION = "0.3.2-codex"
+VERSION = "0.3.3-codex"
 
 
 def _utc_now() -> str:
@@ -71,7 +60,6 @@ def _append_audit(ws: Path, event: str, detail: dict[str, Any]) -> None:
 
 
 def _broker_has_usable_data(tool_responses: list[dict[str, Any]]) -> bool:
-    """Fail closed: stub/offline/empty responses are NOT evidence."""
     if not tool_responses:
         return False
     for resp in tool_responses:
@@ -81,12 +69,8 @@ def _broker_has_usable_data(tool_responses: list[dict[str, Any]]) -> bool:
             continue
         if resp.get("status") in {"NOT_CONFIGURED", "DENIED", "ERROR"}:
             continue
-        # Accept only explicit series payload / observations from broker
         if resp.get("observations") or resp.get("series") or resp.get("data"):
             return True
-        if resp.get("accepted") and resp.get("note"):
-            # task-queue ack without data ≠ usable evidence
-            continue
     return False
 
 
@@ -99,7 +83,6 @@ def _infer_regime(tool_responses: list[dict[str, Any]]) -> dict[str, Any]:
             "confidence": 0.0,
             "reason": "No usable FRED/broker series returned via Avalon NetworkBroker/tools",
         }
-    # Reserved for real broker payloads — never invent direction without data
     return {
         "regime": "UNKNOWN",
         "claim_kind": "DATA_PRESENT_UNCLASSIFIED",
@@ -190,7 +173,6 @@ def run_macro_cycle(client: AvalonAgentClient) -> dict[str, Any]:
     brief = write_brief(ws, regime, responses)
     client.create_artifact("macro-brief", str(brief))
 
-    # Local LLM Gateway only — no cloud model routing from this agent
     model = client.call_model(
         [
             {
@@ -221,37 +203,89 @@ def run_macro_cycle(client: AvalonAgentClient) -> dict[str, Any]:
     return result
 
 
-def main() -> int:
-    import time
+def _keep_alive(client: AvalonAgentClient, result: dict[str, Any]) -> None:
+    """Never return unless process is killed by Agent Host."""
+    heartbeat = max(5, int(os.environ.get("AVALON_AGENT_HEARTBEAT_SECS", "15")))
+    while True:
+        try:
+            client.report_health(
+                "ok",
+                detail=f"macro-x daemon alive; last_evidence={result.get('evidence')}",
+            )
+            _write_json(
+                client.get_workspace() / "metadata" / "heartbeat.json",
+                {"ts": _utc_now(), "evidence": result.get("evidence"), "version": VERSION},
+            )
+        except Exception as e:  # noqa: BLE001
+            try:
+                _append_audit(
+                    client.get_workspace(),
+                    "heartbeat.error",
+                    {"error": str(e)},
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        time.sleep(heartbeat)
 
+
+def main() -> int:
     agent_id = os.environ.get("AVALON_AGENT_ID", "macro-x")
     workspace = Path(os.environ.get("AVALON_WORKSPACE", "."))
+    once = os.environ.get("AVALON_AGENT_ONCE", "").strip().lower() in {"1", "true", "yes"}
+
     client = AvalonAgentClient(agent_id=agent_id, workspace=workspace)
     client.register_agent(
         name="Macro-X",
         version=VERSION,
-        capabilities=["macro", "excel", "local-llm", "fred-broker"],
+        capabilities=["macro", "excel", "local-llm", "fred-broker", "daemon"],
     )
-    client.report_health("ok", detail="macro-x codex package running")
+    client.report_health("ok", detail="macro-x daemon starting")
     client.subscribe("data.updated")
     client.subscribe("system.started")
 
-    # One evidence cycle, then stay alive until Avalon Agent Host stops the process.
-    result = run_macro_cycle(client)
-    print(json.dumps(result, ensure_ascii=False), flush=True)
+    result: dict[str, Any]
+    try:
+        result = run_macro_cycle(client)
+    except Exception as e:  # noqa: BLE001
+        tb = traceback.format_exc()
+        crash = workspace / "metadata" / "crash.log"
+        crash.parent.mkdir(parents=True, exist_ok=True)
+        crash.write_text(tb, encoding="utf-8")
+        _append_audit(workspace, "cycle.error", {"error": str(e)})
+        result = {
+            "agent_id": agent_id,
+            "version": VERSION,
+            "status": "error",
+            "evidence": "INSUFFICIENT_EVIDENCE",
+            "error": str(e),
+        }
+        _write_json(workspace / "metadata" / "last_cycle.json", result)
 
-    heartbeat = max(5, int(os.environ.get("AVALON_AGENT_HEARTBEAT_SECS", "30")))
-    once = os.environ.get("AVALON_AGENT_ONCE", "").strip() in {"1", "true", "yes"}
+    # stdout may be null under Agent Host — also persist
+    _write_json(workspace / "metadata" / "last_stdout.json", result)
+
     if once:
         return 0
 
-    while True:
-        client.report_health(
-            "ok",
-            detail=f"macro-x idle; last_evidence={result.get('evidence')}",
-        )
-        time.sleep(heartbeat)
+    try:
+        _keep_alive(client, result)
+    except Exception as e:  # noqa: BLE001
+        _append_audit(workspace, "daemon.keepalive_crash", {"error": str(e)})
+        # Fall through to last-resort sleep loop (Agent Host may also respawn).
+        while True:
+            time.sleep(30)
+    return 0  # unreachable
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    once = os.environ.get("AVALON_AGENT_ONCE", "").strip().lower() in {"1", "true", "yes"}
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except BaseException as e:  # noqa: BLE001
+        if once:
+            raise
+        sys.stderr.write(f"macro-x fatal (daemon hold): {e}\n")
+        while True:
+            time.sleep(30)

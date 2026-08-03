@@ -42,6 +42,9 @@ pub struct AgentManifest {
     pub healthcheck: Value,
     #[serde(default)]
     pub api_contracts: Value,
+    /// `oneshot` (default) or `daemon` — daemon agents are supervised/restarted if they exit.
+    #[serde(default)]
+    pub lifecycle: Option<String>,
 }
 
 const AGENT_SCHEMA: &str = r#"{
@@ -69,7 +72,8 @@ const AGENT_SCHEMA: &str = r#"{
     "model_policy": { "type": "object" },
     "resource_limits": { "type": "object" },
     "healthcheck": { "type": "object" },
-    "api_contracts": { "type": "object" }
+    "api_contracts": { "type": "object" },
+    "lifecycle": { "type": "string", "enum": ["oneshot", "daemon", "long_running"] }
   },
   "additionalProperties": true
 }"#;
