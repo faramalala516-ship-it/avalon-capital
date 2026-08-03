@@ -287,6 +287,17 @@ fn main() {
             matrix,
             complete_first_run
         ])
-        .run(tauri::generate_context!())
-        .expect("error running Avalon desktop");
+        .build(tauri::generate_context!())
+        .expect("error building Avalon desktop")
+        .run(|app, event| {
+            if matches!(
+                event,
+                tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit
+            ) {
+                if let Some(state) = app.try_state::<AppState>() {
+                    tracing::info!("stopping all agents on desktop exit");
+                    state.kernel.agents.stop_all();
+                }
+            }
+        });
 }

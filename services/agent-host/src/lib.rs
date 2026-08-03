@@ -746,6 +746,14 @@ impl AgentRuntimeManager {
         Ok(info)
     }
 
+    /// Stop every supervised agent process (app shutdown / uninstall cleanup).
+    pub fn stop_all(&self) {
+        let ids: Vec<String> = self.agents.read().keys().cloned().collect();
+        for id in ids {
+            let _ = self.stop(&id);
+        }
+    }
+
     pub fn mark_crashed(&self, agent_id: &str, reason: &str) -> AvalonResult<()> {
         let mut agents = self.agents.write();
         let live = agents

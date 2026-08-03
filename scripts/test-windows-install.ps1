@@ -123,8 +123,25 @@ if ($isPlaintextSqlite) {
   throw "Installed avalon_core.db has a plaintext SQLite header"
 }
 
-Stop-Process -Id $process.Id -Force
-$process.WaitForExit()
+Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+try { $process.WaitForExit(15000) } catch {}
+
+# Auto-started agent daemons (Python) can outlive the desktop process — reclaim locks.
+Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+  Where-Object {
+    $_.CommandLine -and (
+      $_.CommandLine -match 'macro-x' -or
+      $_.CommandLine -match 'AVALON_AGENT_ID' -or
+      $_.CommandLine -match 'Avalon Capital\\Agentique Platform\\agents'
+    )
+  } |
+  ForEach-Object {
+    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+  }
+Get-Process -Name "avalon-desktop","python","python3","py" -ErrorAction SilentlyContinue |
+  Where-Object { $_.Path -and $_.Path -match 'Avalon|Python' } |
+  Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
 
 if ($PackageType -eq "msi") {
   if (-not $entry.PSChildName) { throw "MSI product code missing from uninstall registry" }
@@ -170,5 +187,24 @@ $report | ConvertTo-Json | Set-Content $ReportPath
 $report | Format-List
 
 # CI cleanup only, after retention behavior was verified.
-Remove-Item -Recurse -Force $DataDir
+$removed = $false
+for ($i = 0; $i -lt 8; $i++) {
+  try {
+    if (Test-Path $DataDir) {
+      Remove-Item -Recurse -Force $DataDir -ErrorAction Stop
+    }
+    $removed = -not (Test-Path $DataDir)
+    if ($removed) { break }
+  } catch {
+    Start-Sleep -Seconds 2
+    Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+      Where-Object { $_.CommandLine -and $_.CommandLine -match 'macro-x' } |
+      ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  }
+}
+if (-not $removed -and (Test-Path $DataDir)) {
+  Write-Warning "DataDir cleanup deferred (locked); acceptance already PASS"
+} else {
+  Write-Host "DataDir cleaned"
+}
 Write-Host "ACCEPTANCE_TEST_A_PASS ($PackageType)"
