@@ -21,15 +21,36 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-_REPO = Path(__file__).resolve().parents[3]
-_SDK = _REPO / "packages" / "python-sdk"
-if _SDK.is_dir():
-    sys.path.insert(0, str(_SDK))
+# SDK resolution order (Windows install-safe):
+# 1) vendor/ next to this package (shipped with Codex drop)
+# 2) monorepo packages/python-sdk when developing in-tree
+# 3) PYTHONPATH / site-packages
+_HERE = Path(__file__).resolve().parent
+_VENDOR = _HERE / "vendor"
+if _VENDOR.is_dir():
+    sys.path.insert(0, str(_VENDOR))
+else:
+    _REPO = _HERE.parents[2] if len(_HERE.parents) > 2 else _HERE
+    # agents/codex-drop/macro-x -> repo root is parents[3]
+    for candidate in (
+        _HERE.parents[3] / "packages" / "python-sdk" if len(_HERE.parents) > 3 else None,
+        _HERE.parents[2] / "packages" / "python-sdk" if len(_HERE.parents) > 2 else None,
+    ):
+        if candidate and candidate.is_dir():
+            sys.path.insert(0, str(candidate))
+            break
 
-from avalon_agent_sdk import AvalonAgentClient  # noqa: E402
+try:
+    from avalon_agent_sdk import AvalonAgentClient  # noqa: E402
+except ImportError as e:  # pragma: no cover
+    sys.stderr.write(
+        "FATAL: avalon_agent_sdk missing. Expected vendor/avalon_agent_sdk in the agent package.\n"
+        f"detail: {e}\n"
+    )
+    raise SystemExit(2) from e
 
 SERIES = ("UNRATE", "CPIAUCSL", "FEDFUNDS")
-VERSION = "0.3.0-codex"
+VERSION = "0.3.1-codex"
 
 
 def _utc_now() -> str:

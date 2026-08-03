@@ -48,3 +48,4 @@ __pycache__/
 **/avalon_agent_sdk.egg-info/
 **/__pycache__/
 *.egg-info/
+agents/codex-drop/**/vendor/**/__pycache__/

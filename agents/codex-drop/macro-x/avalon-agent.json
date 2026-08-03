@@ -2,7 +2,7 @@
   "schema_version": 1,
   "agent_id": "macro-x",
   "name": "Macro-X",
-  "version": "0.3.0-codex",
+  "version": "0.3.1-codex",
   "publisher": "Avalon Capital",
   "description": "Macro-X Codex delivery — broker-mediated FRED cycle, INSUFFICIENT_EVIDENCE when no data, local LLM only",
   "runtime": "python",

@@ -60,13 +60,76 @@ struct LiveAgent {
     child: Option<Child>,
 }
 
+#[derive(Debug, Clone)]
+struct PythonLaunch {
+    program: PathBuf,
+    prefix_args: Vec<String>,
+}
+
+fn resolve_python_launch() -> PythonLaunch {
+    if let Ok(p) = std::env::var("AVALON_PYTHON") {
+        return PythonLaunch {
+            program: PathBuf::from(p),
+            prefix_args: vec![],
+        };
+    }
+
+    #[cfg(windows)]
+    let probes: Vec<(&str, Vec<String>)> = vec![
+        ("py", vec!["-3".into()]),
+        ("python", vec![]),
+        ("python3", vec![]),
+    ];
+    #[cfg(not(windows))]
+    let probes: Vec<(&str, Vec<String>)> = vec![("python3", vec![]), ("python", vec![])];
+
+    for (prog, args) in &probes {
+        let mut cmd = Command::new(prog);
+        for a in args {
+            cmd.arg(a);
+        }
+        cmd.arg("-c").arg("import sys; print(sys.version)");
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        if cmd
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+        {
+            return PythonLaunch {
+                program: PathBuf::from(prog),
+                prefix_args: args.clone(),
+            };
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        PythonLaunch {
+            program: PathBuf::from("python"),
+            prefix_args: vec![],
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        PythonLaunch {
+            program: PathBuf::from("python3"),
+            prefix_args: vec![],
+        }
+    }
+}
+
 pub struct AgentRuntimeManager {
     agents: RwLock<HashMap<String, LiveAgent>>,
     workspaces: Arc<WorkspaceManager>,
     events: Arc<EventBus>,
     audit: Arc<AuditLedger>,
     permissions: Arc<PermissionEngine>,
-    python: PathBuf,
+    python: PythonLaunch,
     installed_root: PathBuf,
     api_base: String,
     api_token_file: Option<PathBuf>,
@@ -147,9 +210,7 @@ impl AgentRuntimeManager {
             events,
             audit,
             permissions,
-            python: std::env::var("AVALON_PYTHON")
-                .map(PathBuf::from)
-                .unwrap_or_else(|_| PathBuf::from("python3")),
+            python: resolve_python_launch(),
             installed_root,
             api_base: std::env::var("AVALON_API_BASE")
                 .unwrap_or_else(|_| "http://127.0.0.1:8741".into()),
@@ -488,7 +549,10 @@ impl AgentRuntimeManager {
                 );
                 return Ok(info);
             }
-            let mut cmd = Command::new(&self.python);
+            let mut cmd = Command::new(&self.python.program);
+            for a in &self.python.prefix_args {
+                cmd.arg(a);
+            }
             cmd.arg(&script)
                 .current_dir(&install)
                 .env("AVALON_AGENT_ID", agent_id)
@@ -500,13 +564,41 @@ impl AgentRuntimeManager {
             if let Some(tf) = token_file {
                 cmd.env("AVALON_API_TOKEN_FILE", tf);
             }
-            // Ensure SDK importable from repo packages when running from source installs
-            if let Ok(sdk) = std::env::var("AVALON_PYTHONPATH") {
-                cmd.env("PYTHONPATH", sdk);
+            // Prefer vendored SDK inside the installed agent package (Windows-safe)
+            let mut python_paths = Vec::new();
+            let vendor = install.join("vendor");
+            if vendor.is_dir() {
+                python_paths.push(vendor.to_string_lossy().to_string());
             }
-            cmd.spawn()
-                .map_err(|e| AvalonError::AgentUnavailable(e.to_string()))?
+            if let Ok(sdk) = std::env::var("AVALON_PYTHONPATH") {
+                python_paths.push(sdk);
+            }
+            if !python_paths.is_empty() {
+                let joined = python_paths.join(if cfg!(windows) { ";" } else { ":" });
+                cmd.env("PYTHONPATH", joined);
+            }
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+                cmd.creation_flags(CREATE_NO_WINDOW);
+            }
+            match cmd.spawn() {
+                Ok(child) => child,
+                Err(e) => {
+                    let msg = format!(
+                        "Python launch failed ({} {:?}): {e}. Install Python 3 and ensure `py -3` or `python` works.",
+                        self.python.program.display(),
+                        self.python.prefix_args
+                    );
+                    live.info.status = AgentStatus::Failed;
+                    live.info.last_error = Some(msg.clone());
+                    live.info.pid = None;
+                    return Err(AvalonError::AgentUnavailable(msg));
+                }
+            }
         } else {
+            live.info.status = AgentStatus::Failed;
             return Err(AvalonError::InvalidArgument(format!(
                 "unsupported runtime {runtime}"
             )));

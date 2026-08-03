@@ -96,7 +96,9 @@ export default function Agents() {
           </div>
           <div className={statusClass(a.status)}>{frStatus(a.status)}</div>
           <div className="mono">espace : {a.workspace}</div>
-          <div className="mono">{a.last_error ?? "—"}</div>
+          <div className={a.last_error ? "status-bad mono" : "mono"} style={{ maxWidth: 280 }}>
+            {a.last_error ?? "—"}
+          </div>
           <div className="actions">
             <button
               onClick={() => start(a.manifest.agent_id)}
