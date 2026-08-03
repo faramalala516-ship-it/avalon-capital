@@ -39,7 +39,7 @@ except ImportError as e:  # pragma: no cover
     raise SystemExit(2) from e
 
 SERIES = ("UNRATE", "CPIAUCSL", "FEDFUNDS")
-VERSION = "0.3.3-codex"
+VERSION = "0.3.4-codex"
 
 
 def _utc_now() -> str:

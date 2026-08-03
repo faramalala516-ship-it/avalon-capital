@@ -10,6 +10,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 avalon-kernel = { path = "../../../core/kernel" }
+avalon-agent-host = { path = "../../../services/agent-host" }
 avalon-security = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

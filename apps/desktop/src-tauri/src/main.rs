@@ -1,9 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use avalon_agent_host::AgentStatus;
 use avalon_kernel::{serve_local_api, AvalonCoreKernel, KernelConfig};
 use avalon_security::NetworkMode;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 use tauri::{Manager, State};
 
 struct AppState {
@@ -54,7 +56,20 @@ fn install_agent_preferred(
         .kernel
         .agents
         .install_first_available(&candidates)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            format!(
+                "{e}. Chemins sondés: {}",
+                candidates
+                    .iter()
+                    .map(|p| p.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(" | ")
+            )
+        })?;
+    // Keep Macro-X up after an intentional upgrade.
+    if id == "macro-x" {
+        let _ = state.kernel.agents.start("macro-x");
+    }
     serde_json::to_value(report).map_err(|e| e.to_string())
 }
 
@@ -96,6 +111,45 @@ fn agents_repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../agents")
 }
 
+fn push_agents_root(roots: &mut Vec<PathBuf>, path: PathBuf) {
+    if path.is_dir() && !roots.iter().any(|r| r == &path) {
+        roots.push(path);
+    }
+}
+
+/// Collect every plausible location for bundled/dev agent packages.
+fn collect_agent_search_roots(resource_dir: Option<&Path>) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+
+    if let Some(res) = resource_dir {
+        // Prefer remapped layout: $RESOURCE/agents/... (tauri.conf map)
+        push_agents_root(&mut roots, res.join("agents"));
+        // Legacy list layout: $RESOURCE/resources/agents/...
+        push_agents_root(&mut roots, res.join("resources").join("agents"));
+        // Parent-dir rewrite used by Tauri for ../ patterns
+        push_agents_root(&mut roots, res.join("_up_").join("agents"));
+        push_agents_root(
+            &mut roots,
+            res.join("_up_").join("resources").join("agents"),
+        );
+        // Sometimes resources sit next to the executable on Windows
+        if let Some(exe_parent) = res.parent() {
+            push_agents_root(&mut roots, exe_parent.join("agents"));
+            push_agents_root(&mut roots, exe_parent.join("resources").join("agents"));
+        }
+    }
+
+    // Dev / CI checkout
+    push_agents_root(&mut roots, agents_repo_root());
+    // build.rs output tree (useful in tauri dev before bundle)
+    push_agents_root(
+        &mut roots,
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/agents"),
+    );
+
+    roots
+}
+
 fn preferred_candidates(
     search_roots: &[PathBuf],
     kernel: &AvalonCoreKernel,
@@ -103,34 +157,66 @@ fn preferred_candidates(
 ) -> Vec<PathBuf> {
     let mut candidates = Vec::new();
     for root in search_roots {
+        // Production Codex drop first
         candidates.push(root.join("codex-drop").join(id));
         candidates.push(root.join(id));
-        candidates.push(root.join("templates").join(format!("{id}-mock")));
         candidates.push(root.join("templates").join(id));
+        // Mock templates last (dev/acceptance only)
+        candidates.push(root.join("templates").join(format!("{id}-mock")));
     }
     candidates.push(kernel.paths.agents_dir.join("incoming").join(id));
     candidates
 }
 
 fn bootstrap_agents(kernel: &AvalonCoreKernel, search_roots: &[PathBuf]) {
-    // Macro-X: prefer Codex/bundled package
+    tracing::info!(
+        "agent search roots: {}",
+        search_roots
+            .iter()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>()
+            .join(" | ")
+    );
+
     let macro_candidates = preferred_candidates(search_roots, kernel, "macro-x");
-    if kernel.agents.install_first_available(&macro_candidates).is_err() {
-        let mock = agents_repo_root().join("templates/macro-x-mock");
-        if mock.join("avalon-agent.json").is_file() {
-            if let Ok(raw) = std::fs::read_to_string(mock.join("avalon-agent.json")) {
-                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
-                    let _ = kernel.agents.register_manifest(&v);
-                    let _ = kernel.agents.set_install_root("macro-x", mock);
+    match kernel.agents.install_first_available(&macro_candidates) {
+        Ok(report) => {
+            tracing::info!(
+                "Macro-X installed from {} → v{}",
+                report.source.display(),
+                report.version
+            );
+            match kernel.agents.start("macro-x") {
+                Ok(inst) => tracing::info!("Macro-X auto-start: {:?}", inst.status),
+                Err(e) => tracing::warn!("Macro-X auto-start failed: {e}"),
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Macro-X bundled install failed: {e}");
+            // Never bind the oneshot mock as production Macro-X in release builds.
+            #[cfg(debug_assertions)]
+            {
+                let mock = agents_repo_root().join("templates/macro-x-mock");
+                if mock.join("avalon-agent.json").is_file() {
+                    if let Ok(raw) = std::fs::read_to_string(mock.join("avalon-agent.json")) {
+                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+                            let _ = kernel.agents.register_manifest(&v);
+                            let _ = kernel.agents.set_install_root("macro-x", mock);
+                        }
+                    }
+                }
+            }
+            // If a previous install exists, still try to keep the daemon up.
+            if let Some(existing) = kernel.agents.get("macro-x") {
+                if existing.status != AgentStatus::NotInstalled {
+                    let _ = kernel.agents.start("macro-x");
                 }
             }
         }
     }
 
     // Hello Avalon demo package
-    let hello_candidates = preferred_candidates(search_roots, kernel, "hello-avalon");
-    // templates/hello-avalon is under search roots as templates/hello-avalon
-    let mut hello = hello_candidates;
+    let mut hello = preferred_candidates(search_roots, kernel, "hello-avalon");
     for root in search_roots {
         hello.insert(0, root.join("templates/hello-avalon"));
     }
@@ -163,24 +249,24 @@ fn main() {
             tracing::error!("Avalon local API exited: {e}");
         }
     });
+
+    // Host supervisor: keep daemon agents alive even if UI polling changes later.
+    let supervise = kernel.clone();
+    std::thread::spawn(move || loop {
+        supervise.agents.poll();
+        std::thread::sleep(Duration::from_secs(2));
+    });
+
     // Brief wait so api.token exists before first agent start from UI
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    std::thread::sleep(Duration::from_millis(500));
 
     tauri::Builder::default()
         .setup(move |app| {
-            let mut search_roots = vec![agents_repo_root()];
-            // Bundled resources (NSIS/MSI): resource_dir/agents/...
-            if let Ok(res) = app.path().resource_dir() {
-                let bundled = res.join("agents");
-                if bundled.is_dir() {
-                    search_roots.insert(0, bundled);
-                }
-                // Some Tauri layouts nest resources under _up_
-                let nested = res.join("_up_").join("agents");
-                if nested.is_dir() {
-                    search_roots.insert(0, nested);
-                }
+            let resource_dir = app.path().resource_dir().ok();
+            if let Some(ref res) = resource_dir {
+                tracing::info!("Tauri resource_dir={}", res.display());
             }
+            let search_roots = collect_agent_search_roots(resource_dir.as_deref());
             bootstrap_agents(&kernel, &search_roots);
             app.manage(AppState {
                 kernel: kernel.clone(),

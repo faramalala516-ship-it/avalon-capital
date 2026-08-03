@@ -244,6 +244,7 @@ dependencies = [
 name = "avalon-desktop"
 version = "0.1.0"
 dependencies = [
+ "avalon-agent-host",
  "avalon-kernel",
  "avalon-security",
  "parking_lot",

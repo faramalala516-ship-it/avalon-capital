@@ -459,15 +459,52 @@ impl AgentRuntimeManager {
         Ok(report)
     }
 
-    /// Try candidates in order; first valid package wins.
+    /// Try candidates in order. Prefer packages that declare `lifecycle: daemon|long_running`,
+    /// then higher semver-ish version strings, then first readable package.
     pub fn install_first_available(&self, candidates: &[PathBuf]) -> AvalonResult<AgentInstallReport> {
+        #[derive(Clone)]
+        struct Ranked {
+            path: PathBuf,
+            daemon: bool,
+            version: String,
+        }
+        let mut ranked: Vec<Ranked> = Vec::new();
         let mut last = AvalonError::InvalidArgument("no agent package candidates".into());
         for path in candidates {
-            if path.join("avalon-agent.json").is_file() {
-                match self.install_from_dir(path) {
-                    Ok(r) => return Ok(r),
-                    Err(e) => last = e,
-                }
+            let manifest = path.join("avalon-agent.json");
+            if !manifest.is_file() {
+                continue;
+            }
+            let Ok(raw) = fs::read_to_string(&manifest) else {
+                continue;
+            };
+            let Ok(value) = serde_json::from_str::<serde_json::Value>(&raw) else {
+                continue;
+            };
+            let daemon = matches!(
+                value.get("lifecycle").and_then(|v| v.as_str()),
+                Some("daemon") | Some("long_running")
+            );
+            let version = value
+                .get("version")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            ranked.push(Ranked {
+                path: path.clone(),
+                daemon,
+                version,
+            });
+        }
+        ranked.sort_by(|a, b| {
+            b.daemon
+                .cmp(&a.daemon)
+                .then_with(|| b.version.cmp(&a.version))
+        });
+        for item in ranked {
+            match self.install_from_dir(&item.path) {
+                Ok(r) => return Ok(r),
+                Err(e) => last = e,
             }
         }
         Err(last)
@@ -643,15 +680,47 @@ impl AgentRuntimeManager {
         live.info.pid = child.id().into();
         live.info.status = AgentStatus::Running;
         live.info.started_at = Some(Utc::now());
+        live.info.last_error = None;
         live.child = Some(child);
-        let info = live.info.clone();
+        let daemon = lifecycle_is_daemon(&live.info.manifest);
         drop(agents);
         let _ = self.events.publish(EventBus::system_event(
             "agent.started",
             "agent-host",
             serde_json::json!({"agent_id": agent_id}),
         ));
-        Ok(info)
+
+        // Catch instant exits (Store stub Python, missing SDK, oneshot) without nested poll→start.
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        {
+            let mut agents = self.agents.write();
+            if let Some(live) = agents.get_mut(agent_id) {
+                if let Some(child) = live.child.as_mut() {
+                    if let Ok(Some(status)) = child.try_wait() {
+                        live.child = None;
+                        live.info.pid = None;
+                        if daemon {
+                            // Orphan Starting + no child → supervisor/poll will respawn.
+                            live.info.status = AgentStatus::Starting;
+                            live.info.last_error = Some(format!(
+                                "process exited immediately ({status}); daemon will auto-restart"
+                            ));
+                        } else if status.success() {
+                            live.info.status = AgentStatus::Stopped;
+                            live.info.last_error =
+                                Some("oneshot agent exited after run".into());
+                        } else {
+                            live.info.status = AgentStatus::Failed;
+                            live.info.last_error = Some(format!(
+                                "process exited immediately ({status}). Check Python 3 (`py -3`) and workspace/metadata/agent.stderr.log"
+                            ));
+                        }
+                    }
+                }
+                return Ok(live.info.clone());
+            }
+        }
+        Err(AvalonError::AgentUnavailable(agent_id.into()))
     }
 
     pub fn stop(&self, agent_id: &str) -> AvalonResult<AgentInstance> {
@@ -710,6 +779,36 @@ impl AgentRuntimeManager {
         {
             let mut agents = self.agents.write();
             for (id, live) in agents.iter_mut() {
+                // Daemon left in Starting with no child (instant exit after spawn).
+                if live.child.is_none()
+                    && live.info.status == AgentStatus::Starting
+                    && !live.intentional_stop
+                    && lifecycle_is_daemon(&live.info.manifest)
+                {
+                    if live.restart_count < MAX_DAEMON_RESTARTS {
+                        live.restart_count += 1;
+                        live.info.last_error = Some(format!(
+                            "daemon auto-restart {}/{}",
+                            live.restart_count, MAX_DAEMON_RESTARTS
+                        ));
+                        let _ = self.events.publish(EventBus::system_event(
+                            "agent.restarting",
+                            "agent-host",
+                            serde_json::json!({
+                                "agent_id": id,
+                                "restart": live.restart_count
+                            }),
+                        ));
+                        restart_ids.push(id.clone());
+                    } else {
+                        live.info.status = AgentStatus::Crashed;
+                        live.info.last_error = Some(format!(
+                            "daemon exceeded {MAX_DAEMON_RESTARTS} restarts"
+                        ));
+                    }
+                    continue;
+                }
+
                 if let Some(child) = live.child.as_mut() {
                     match child.try_wait() {
                         Ok(Some(status)) => {
@@ -865,12 +964,12 @@ mod tests {
         fs::write(pkg.join("main.py"), "raise SystemExit(0)\n").unwrap();
 
         host.install_from_dir(&pkg).unwrap();
-        let started = host.start("pulse").unwrap();
-        assert_eq!(started.status, AgentStatus::Running);
+        let _ = host.start("pulse").unwrap();
 
         let mut saw_restart = false;
-        for _ in 0..40 {
+        for _ in 0..50 {
             std::thread::sleep(std::time::Duration::from_millis(50));
+            host.poll();
             let agent = host.get("pulse").unwrap();
             if agent
                 .last_error
@@ -880,14 +979,16 @@ mod tests {
             {
                 saw_restart = true;
             }
-            if agent.status == AgentStatus::Running && saw_restart {
+            // Instant-exit daemons may bounce Starting↔Running; restart signal is enough.
+            if saw_restart {
                 break;
             }
         }
         let agent = host.get("pulse").unwrap();
         assert!(
             saw_restart,
-            "expected daemon auto-restart, last_error={:?}",
+            "expected daemon auto-restart, status={:?} last_error={:?}",
+            agent.status,
             agent.last_error
         );
         let _ = host.stop("pulse");

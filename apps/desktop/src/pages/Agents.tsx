@@ -68,13 +68,21 @@ export default function Agents() {
         method: "POST",
         body: JSON.stringify({ agent_id: id })
       });
+      if (id === "macro-x") {
+        try {
+          await fetchJson(`/v1/agents/${id}/start`, { method: "POST" });
+        } catch {
+          /* surfaced via last_error */
+        }
+      }
       await load();
     } catch (e) {
       const detail = e instanceof Error ? e.message : String(e);
       setError(
         `Installation impossible (${detail}). ` +
-          `Déposez le paquet dans %LOCALAPPDATA%\\Avalon Capital\\Agentique Platform\\agents\\incoming\\${id} ` +
-          `puis réessayez (ou lancez .\\scripts\\install-agent-windows.ps1).`
+          `Réinstallez Avalon depuis le dernier artefact CI, ou déposez le paquet dans ` +
+          `%LOCALAPPDATA%\\Avalon Capital\\Agentique Platform\\agents\\incoming\\${id}. ` +
+          `Python 3 doit être installé (py -3).`
       );
     } finally {
       setBusy(null);
@@ -85,10 +93,10 @@ export default function Agents() {
     <>
       <h1 className="page-title">Centre de contrôle des agents</h1>
       <p className="page-sub">
-        Runtime réel. Macro-X est bundlé dans l’installeur — cliquez{" "}
-        <strong>Installer / mettre à jour</strong> puis <strong>Démarrer</strong>.
-        (Python 3 requis. Option Codex :{" "}
-        <span className="mono">.\scripts\INSTALL-MACRO-X.bat</span>)
+        Macro-X est installé et démarré automatiquement à l’ouverture (daemon).
+        Version attendue <span className="mono">0.3.4-codex</span>. Python 3 requis
+        (<span className="mono">py -3</span> ou <span className="mono">python</span>).
+        Si le statut n’est pas EN COURS : <strong>Réinstaller / mettre à jour</strong>.
       </p>
       {error ? <p className="status-bad">{error}</p> : null}
       {agents.map((a) => (
