@@ -100,8 +100,8 @@ export async function fetchJson<T>(path: string, init: RequestInit = {}): Promis
 
 export function statusClass(s: string | undefined): string {
   if (!s) return "";
-  if (s === "SECURE" || s === "RUNNING" || s === "OK") return "status-ok";
-  if (s === "DEGRADED" || s === "STOPPED" || s === "NOT_INSTALLED" || s === "SYNC_ONLY") return "status-warn";
+  if (s === "SECURE" || s === "RUNNING" || s === "OK" || s === "REGISTERED") return "status-ok";
+  if (s === "DEGRADED" || s === "STOPPED" || s === "NOT_INSTALLED" || s === "SYNC_ONLY" || s === "STARTING") return "status-warn";
   if (s === "FAILED" || s === "CRASHED" || s === "LOCKED" || s === "COMPROMISED_SUSPECTED" || s === "OFFLINE_LOCK") return "status-bad";
   return "";
 }

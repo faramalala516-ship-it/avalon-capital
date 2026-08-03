@@ -75,6 +75,9 @@ def main() -> int:
         src = entry.read_text(encoding="utf-8", errors="replace")
         if "avalon_agent_sdk" not in src and "AvalonAgentClient" not in src:
             fail("main entrypoint does not reference avalon_agent_sdk / AvalonAgentClient")
+        vendor_sdk = root / "vendor" / "avalon_agent_sdk" / "__init__.py"
+        if not vendor_sdk.is_file():
+            fail("vendor/avalon_agent_sdk missing — Windows installs need a vendored SDK")
 
     print("PASS")
     print(f"  package:   {root}")

@@ -93,15 +93,20 @@ fn acceptance_d_workspace_isolation() {
     k.shutdown().unwrap();
 }
 
+fn install_template(k: &AvalonCoreKernel, relative: &str) {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../agents/templates")
+        .join(relative)
+        .canonicalize()
+        .expect("agent template path");
+    k.agents.install_from_dir(&root).expect("install template");
+}
+
 #[test]
 fn acceptance_e_offline_lock() {
     let k = boot();
     k.set_network_mode(NetworkMode::OfflineLock);
-    let m = serde_json::from_str::<serde_json::Value>(include_str!(
-        "../../../agents/templates/hello-avalon/avalon-agent.json"
-    ))
-    .unwrap();
-    k.agents.register_manifest(&m).unwrap();
+    install_template(&k, "hello-avalon");
     k.agents.start("hello-avalon").unwrap();
     assert!(k
         .network
@@ -119,11 +124,7 @@ fn acceptance_e_offline_lock() {
 #[test]
 fn acceptance_f_agent_crash_core_alive() {
     let k = boot();
-    let m = serde_json::from_str::<serde_json::Value>(include_str!(
-        "../../../agents/templates/hello-avalon/avalon-agent.json"
-    ))
-    .unwrap();
-    k.agents.register_manifest(&m).unwrap();
+    install_template(&k, "hello-avalon");
     k.agents.start("hello-avalon").unwrap();
     k.agents.mark_crashed("hello-avalon", "boom").unwrap();
     assert!(matches!(
@@ -192,14 +193,7 @@ fn acceptance_i_permission_ask_deny() {
 #[test]
 fn acceptance_j_macro_x_contract() {
     let k = boot();
-    let m = serde_json::from_str::<serde_json::Value>(include_str!(
-        "../../../agents/templates/macro-x-mock/avalon-agent.json"
-    ))
-    .unwrap();
-    k.agents.register_manifest(&m).unwrap();
-    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../agents/templates/macro-x-mock");
-    k.agents.set_install_root("macro-x", root).unwrap();
+    install_template(&k, "macro-x-mock");
     k.agents.start("macro-x").unwrap();
     k.events
         .publish(avalon_events::EventBus::system_event(

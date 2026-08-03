@@ -13,6 +13,7 @@ export const frStatus = (raw: string | undefined | null): string => {
     FAILED: "ÉCHEC",
     CRASHED: "PLANTÉ",
     NOT_INSTALLED: "NON INSTALLÉ",
+    REGISTERED: "ENREGISTRÉ",
     STARTING: "DÉMARRAGE",
     STOPPING: "ARRÊT",
     ONLINE: "EN LIGNE",

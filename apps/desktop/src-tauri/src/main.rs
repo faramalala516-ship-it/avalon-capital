@@ -101,7 +101,9 @@ fn complete_first_run(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 fn agents_repo_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../../agents")
+    // CARGO_MANIFEST_DIR = apps/desktop/src-tauri → ../../../agents = repo/agents
+    // (include_str! from src/main.rs still needs ../../../../agents — different base)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../agents")
 }
 
 fn bootstrap_macro_x(kernel: &AvalonCoreKernel, search_roots: &[PathBuf]) {

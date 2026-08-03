@@ -456,6 +456,8 @@ impl AgentRuntimeManager {
     }
 
     /// Re-bind packages already copied under `installed_root` (survives process restart).
+    /// Layout expected: `{agents_dir}/{agent_id}/{version}/avalon-agent.json`
+    /// Skips drop-zone dirs like `incoming/` so they never overwrite a real install_root.
     pub fn discover_installed(&self) -> AvalonResult<usize> {
         if !self.installed_root.is_dir() {
             return Ok(0);
@@ -470,11 +472,20 @@ impl AgentRuntimeManager {
             if !agent_path.is_dir() {
                 continue;
             }
+            let top = agent_path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            // Never treat the Windows drop zone / caches as installed packages
+            if matches!(top.as_str(), "incoming" | "cache" | "tmp" | "staging") {
+                continue;
+            }
             let mut versions: Vec<PathBuf> = fs::read_dir(&agent_path)
                 .map_err(|e| AvalonError::Internal(e.to_string()))?
                 .filter_map(|e| e.ok())
                 .map(|e| e.path())
-                .filter(|p| p.join("avalon-agent.json").is_file())
+                .filter(|p| p.is_dir() && p.join("avalon-agent.json").is_file())
                 .collect();
             versions.sort();
             let Some(latest) = versions.pop() else {
@@ -528,26 +539,15 @@ impl AgentRuntimeManager {
 
         let child = if runtime == "python" {
             if !script.exists() {
-                live.info.status = AgentStatus::Running;
-                live.info.started_at = Some(Utc::now());
-                live.info.pid = Some(std::process::id());
-                live.info.last_error = None;
-                let info = live.info.clone();
-                drop(agents);
-                let _ = self.events.publish(EventBus::system_event(
-                    "agent.started",
-                    "agent-host",
-                    serde_json::json!({"agent_id": agent_id, "mode": "in_process_supervised"}),
-                ));
-                let _ = self.audit.append(
-                    agent_id,
-                    "agent.started",
-                    agent_id,
-                    "OK",
-                    None,
-                    None,
+                let msg = format!(
+                    "entrypoint missing: {} (install_root={})",
+                    script.display(),
+                    install.display()
                 );
-                return Ok(info);
+                live.info.status = AgentStatus::Failed;
+                live.info.last_error = Some(msg.clone());
+                live.info.pid = None;
+                return Err(AvalonError::AgentUnavailable(msg));
             }
             let mut cmd = Command::new(&self.python.program);
             for a in &self.python.prefix_args {
@@ -559,7 +559,8 @@ impl AgentRuntimeManager {
                 .env("AVALON_WORKSPACE", workspace.to_string_lossy().as_ref())
                 .env("AVALON_API_BASE", &api_base)
                 .stdin(Stdio::null())
-                .stdout(Stdio::piped())
+                // Avoid pipe-buffer deadlock: agents persist outputs in workspace files
+                .stdout(Stdio::null())
                 .stderr(Stdio::piped());
             if let Some(tf) = token_file {
                 cmd.env("AVALON_API_TOKEN_FILE", tf);
