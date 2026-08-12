@@ -1,0 +1,17 @@
+[package]
+name = "avalon-permissions"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+avalon-audit = { path = "../audit" }
+avalon-security = { workspace = true }
+chrono = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

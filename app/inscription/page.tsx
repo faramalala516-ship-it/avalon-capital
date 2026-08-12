@@ -3,7 +3,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function SignUpPage() {
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+  if (
+    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("placeholder") ||
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("replace_me")
+  ) {
     return (
       <main className="flex min-h-screen items-center justify-center px-4 py-10">
         <div className="glass max-w-md rounded-lg p-6 text-center">

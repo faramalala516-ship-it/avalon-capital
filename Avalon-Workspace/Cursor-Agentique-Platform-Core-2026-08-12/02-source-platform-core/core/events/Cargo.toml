@@ -1,0 +1,14 @@
+[package]
+name = "avalon-events"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+avalon-permissions = { path = "../permissions" }
+avalon-security = { workspace = true }
+chrono = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }

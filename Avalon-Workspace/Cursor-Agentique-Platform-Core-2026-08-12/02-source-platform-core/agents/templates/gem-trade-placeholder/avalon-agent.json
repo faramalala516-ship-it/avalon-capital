@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "agent_id": "gem-trade",
+  "name": "Gem-Trade",
+  "version": "0.0.0",
+  "publisher": "Avalon Capital",
+  "description": "PLACEHOLDER — Gem-Trade agent package not installed",
+  "runtime": "python",
+  "entrypoint": "main.py",
+  "permissions": [],
+  "network": {},
+  "resources": {},
+  "events": {},
+  "capabilities": ["trading"],
+  "minimum_core_version": "0.1.0",
+  "status_hint": "NOT_INSTALLED"
+}

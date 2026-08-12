@@ -1,0 +1,61 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Avalon Agentique Platform",
+  "version": "0.1.0",
+  "identifier": "com.avaloncapital.agentique",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Centre de commande Avalon",
+        "width": 1440,
+        "height": 900,
+        "resizable": true,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' http://127.0.0.1:8741; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "resources": {
+      "resources/agents": "agents"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "perMachine",
+        "displayLanguageSelector": false,
+        "languages": ["French"],
+        "installerIcon": "icons/icon.ico",
+        "startMenuFolder": "Avalon Capital"
+      },
+      "wix": {
+        "language": "fr-FR"
+      }
+    },
+    "publisher": "Avalon Capital",
+    "copyright": "Copyright (c) Avalon Capital",
+    "category": "Finance",
+    "shortDescription": "Local OS for Avalon AI agents",
+    "longDescription": "Avalon Agentique Platform-Core — secure local agent runtime with vault, permissions, and offline lock."
+  },
+  "plugins": {}
+}

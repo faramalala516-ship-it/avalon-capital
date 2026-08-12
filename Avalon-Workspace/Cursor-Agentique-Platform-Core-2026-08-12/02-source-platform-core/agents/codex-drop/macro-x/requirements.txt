@@ -1,0 +1,5 @@
+# Install from Avalon monorepo root:
+#   pip install -e ../../../../packages/python-sdk
+# Or:
+#   ./scripts/codex-setup.sh
+-e ../../../packages/python-sdk

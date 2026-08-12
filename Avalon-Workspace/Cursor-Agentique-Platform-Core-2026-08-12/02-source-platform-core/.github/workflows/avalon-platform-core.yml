@@ -1,0 +1,321 @@
+name: Avalon Platform Core
+
+on:
+  push:
+    branches: [main, "cursor/**"]
+    paths:
+      - "core/**"
+      - "services/**"
+      - "apps/desktop/**"
+      - "agents/**"
+      - "packages/**"
+      - "scripts/**"
+      - "installer/**"
+      - "docs/CODE_SIGNING.md"
+      - "docs/WINDOWS_CI_PACKAGING.md"
+      - "docs/CODEX_AGENT_BUILD_GUIDE.md"
+      - "docs/MACRO_X_INTEGRATION.md"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/avalon-platform-core.yml"
+  pull_request:
+    paths:
+      - "core/**"
+      - "services/**"
+      - "apps/desktop/**"
+      - "agents/**"
+      - "packages/**"
+      - "scripts/**"
+      - "installer/**"
+      - "docs/CODE_SIGNING.md"
+      - "docs/WINDOWS_CI_PACKAGING.md"
+      - "docs/CODEX_AGENT_BUILD_GUIDE.md"
+      - "docs/MACRO_X_INTEGRATION.md"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/avalon-platform-core.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-linux:
+    name: Core tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Core unit + integration tests
+        run: cargo test --workspace --exclude avalon-desktop
+
+      - name: Security acceptance suite
+        run: cargo test -p avalon-kernel --test acceptance_security
+
+      - name: Kernel self-test
+        run: |
+          TMP=$(mktemp -d)
+          cargo run -p avalon-kernel -- --data-dir "$TMP" self-test
+
+      - name: Release core binary
+        run: |
+          cargo build -p avalon-kernel --release
+          mkdir -p release/checksums
+          cp target/release/avalon-core release/avalon-core
+          echo "0.1.0" > release/version.txt
+          sha256sum release/avalon-core release/version.txt > release/checksums/SHA256SUMS
+
+      - name: Upload Linux core artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: avalon-core-linux-x64
+          path: |
+            release/avalon-core
+            release/version.txt
+            release/checksums/SHA256SUMS
+          if-no-files-found: error
+
+  desktop-ui:
+    name: Desktop UI build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: avalon-command-center-web
+          path: apps/desktop/dist
+
+  windows-installer:
+    name: Windows Tauri installer (NSIS + MSI)
+    runs-on: windows-latest
+    needs: [core-linux, desktop-ui]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            apps/desktop/src-tauri -> apps/desktop/src-tauri/target
+
+      - name: Install frontend deps
+        working-directory: apps/desktop
+        run: npm ci
+
+      - name: Ensure WebView2 Evergreen Runtime
+        shell: pwsh
+        run: |
+          $bootstrap = Join-Path $env:TEMP "MicrosoftEdgeWebview2Setup.exe"
+          Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -OutFile $bootstrap
+          Start-Process -FilePath $bootstrap -ArgumentList "/silent","/install" -Wait -NoNewWindow
+          Write-Host "WebView2 bootstrap completed (or already present)"
+
+      - name: Build Core release binary
+        run: cargo build -p avalon-kernel --release
+
+      - name: Tauri build (NSIS + MSI)
+        working-directory: apps/desktop
+        shell: pwsh
+        run: |
+          npm exec -- tauri build --ci
+        env:
+          # Tauri updater key is separate from Authenticode; leave unset unless operators configure it.
+          TAURI_SIGNING_PRIVATE_KEY: ""
+
+      - name: Stage release directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release, release/checksums | Out-Null
+          if (Test-Path target/release/avalon-core.exe) {
+            Copy-Item -Force target/release/avalon-core.exe release/avalon-core.exe
+          }
+          if (Test-Path target/release/avalon-desktop.exe) {
+            Copy-Item -Force target/release/avalon-desktop.exe release/avalon-desktop.exe
+          }
+
+          # Cargo workspace emits Tauri bundles under the repo-root target/, not src-tauri/target.
+          $bundleCandidates = @(
+            "target/release/bundle",
+            "apps/desktop/src-tauri/target/release/bundle"
+          )
+          foreach ($bundle in $bundleCandidates) {
+            if (-not (Test-Path $bundle)) { continue }
+            Write-Host "Scanning bundle dir $bundle"
+            Get-ChildItem -Path $bundle -Recurse -File -Include *.exe,*.msi -ErrorAction SilentlyContinue | ForEach-Object {
+              $dest = Join-Path "release" $_.Name
+              Copy-Item $_.FullName $dest -Force
+              Write-Host "Staged $($_.Name) ($($_.Length) bytes)"
+            }
+          }
+
+          $nsis = Get-ChildItem release -File -Filter "*-setup.exe" -ErrorAction SilentlyContinue |
+            Sort-Object Length -Descending | Select-Object -First 1
+          if (-not $nsis) {
+            $nsis = Get-ChildItem release -File -Filter "*Setup*.exe" -ErrorAction SilentlyContinue |
+              Sort-Object Length -Descending | Select-Object -First 1
+          }
+          if ($nsis) {
+            Copy-Item $nsis.FullName "release/Avalon-Agentique-Platform-Setup.exe" -Force
+            Write-Host "Canonical Setup: $($nsis.Name)"
+          } else {
+            Write-Error "NSIS Setup.exe not found in release/ after staging"
+          }
+
+          $msi = Get-ChildItem release -File -Filter "*.msi" -ErrorAction SilentlyContinue |
+            Sort-Object Length -Descending | Select-Object -First 1
+          if ($msi) {
+            Copy-Item $msi.FullName "release/Avalon-Agentique-Platform.msi" -Force
+            Write-Host "Canonical MSI: $($msi.Name)"
+          } else {
+            Write-Warning "MSI not found in release/ after staging"
+          }
+
+          Get-ChildItem release -Recurse | Select-Object FullName, Length
+
+      - name: Authenticode sign (secrets-gated)
+        shell: pwsh
+        env:
+          AVALON_WINDOWS_CODESIGN_PFX_BASE64: ${{ secrets.AVALON_WINDOWS_CODESIGN_PFX_BASE64 }}
+          AVALON_WINDOWS_CODESIGN_PFX_PASSWORD: ${{ secrets.AVALON_WINDOWS_CODESIGN_PFX_PASSWORD }}
+          AVALON_WINDOWS_CODESIGN_TIMESTAMP_URL: ${{ vars.AVALON_WINDOWS_CODESIGN_TIMESTAMP_URL }}
+          AVALON_WINDOWS_CODESIGN_SUBJECT: ${{ vars.AVALON_WINDOWS_CODESIGN_SUBJECT }}
+        run: |
+          ./scripts/sign-windows.ps1 -ReleaseDir release
+          $statusFile = "release/signing/status.txt"
+          if (Test-Path $statusFile) {
+            $status = (Get-Content $statusFile -Raw).Trim()
+            Write-Host "Signing status: $status"
+            if ($status -eq "SIGNED") {
+              ./scripts/sign-windows.ps1 -ReleaseDir release -VerifyOnly
+            }
+          } else {
+            Write-Host "Signing status: SKIP (no status marker)"
+          }
+
+      - name: Finalize manifest and checksums
+        shell: pwsh
+        run: |
+          $signed = $false
+          $statusFile = "release/signing/status.txt"
+          if ((Test-Path $statusFile) -and ((Get-Content $statusFile -Raw).Trim() -eq "SIGNED")) {
+            $signed = $true
+          }
+
+          Set-Content -Path release/version.txt -Value "0.1.0" -NoNewline
+          $channel = if ($signed) { "SIGNED" } else { "DEV" }
+          $manifest = @{
+            product = "Avalon Agentique Platform"
+            version = "0.1.0"
+            build = $env:GITHUB_SHA
+            channel = $channel
+            signed = $signed
+            signing = if ($signed) { "authenticode" } else { "unsigned" }
+            webview2 = "evergreen-bootstrap-or-system"
+            artifacts = @(Get-ChildItem release -File | ForEach-Object { $_.Name })
+          } | ConvertTo-Json
+          Set-Content -Path release/manifest.json -Value $manifest
+
+          New-Item -ItemType Directory -Force release/checksums | Out-Null
+          if (Test-Path release/checksums/SHA256SUMS) { Remove-Item release/checksums/SHA256SUMS }
+          Get-ChildItem release -File | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            Add-Content release/checksums/SHA256SUMS "$hash  $($_.Name)"
+          }
+          Write-Host "manifest.signed=$signed channel=$channel"
+          Get-ChildItem release -Recurse | Select-Object FullName, Length
+
+      - name: Upload Windows release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: avalon-windows-installers
+          path: |
+            release/**
+          if-no-files-found: error
+
+  windows-install-smoke:
+    name: Clean Windows install (${{ matrix.package }})
+    runs-on: windows-latest
+    needs: [windows-installer]
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [nsis, msi]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows installers
+        uses: actions/download-artifact@v4
+        with:
+          name: avalon-windows-installers
+          path: release
+
+      - name: Verify release checksums
+        shell: pwsh
+        run: |
+          $lines = Get-Content release/checksums/SHA256SUMS
+          foreach ($line in $lines) {
+            if ($line -notmatch '^([0-9a-f]{64})\s{2}(.+)$') { continue }
+            $expected = $Matches[1]
+            $file = Join-Path "release" $Matches[2]
+            if (-not (Test-Path $file)) { throw "Checksummed file missing: $file" }
+            $actual = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+            if ($actual -ne $expected) { throw "SHA256 mismatch: $file" }
+          }
+          Write-Host "All release checksums verified"
+
+      - name: Verify Authenticode when manifest.signed
+        shell: pwsh
+        run: |
+          $manifest = Get-Content release/manifest.json -Raw | ConvertFrom-Json
+          if ($manifest.signed -eq $true) {
+            Write-Host "manifest.signed=true — enforcing Authenticode verification"
+            ./scripts/sign-windows.ps1 -ReleaseDir release -VerifyOnly
+          } else {
+            Write-Host "manifest.signed=false — Authenticode not required for this DEV build"
+          }
+
+      - name: Install, launch, initialize vault, and uninstall
+        shell: pwsh
+        run: |
+          ./scripts/test-windows-install.ps1 `
+            -PackageType "${{ matrix.package }}" `
+            -ReleaseDir "release"
+
+      - name: Upload install acceptance evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: avalon-install-test-${{ matrix.package }}
+          path: install-test-results/**
+          if-no-files-found: warn

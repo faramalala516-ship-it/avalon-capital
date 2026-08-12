@@ -11,4 +11,46 @@ dev-server*.log
 dev-server.pid
 lighthouse*.json
 .open-next
-dist
+
+# Avalon Agentique Platform
+/target
+**/target
+apps/desktop/dist
+apps/desktop/src-tauri/target
+release/avalon-core
+release/avalon-core.exe
+release/*.exe
+release/*.msi
+!release/checksums/.gitkeep
+!release/manifest.json
+!release/version.txt
+!release/release-notes.md
+*.avalon-backup
+**/secure/
+**/.dev_root_wrap_key
+**/root.key.sealed
+**/vault.bin
+**/api.token
+**/avalon_core.db
+**/avalon_core.db.tmp
+test_data/
+test_vault/
+test_workspaces/
+.DS_Store
+*.pdb
+apps/desktop/node_modules
+apps/desktop/dist
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Python packaging
+**/avalon_agent_sdk.egg-info/
+**/__pycache__/
+*.egg-info/
+agents/codex-drop/**/vendor/**/__pycache__/
+apps/desktop/src-tauri/resources/
+
+# Local Dropbox-oriented export zip (folder Avalon-Workspace/ is tracked)
+Avalon-Workspace-*.zip
+

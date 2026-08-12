@@ -1,0 +1,56 @@
+[package]
+name = "avalon-kernel"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "AvalonCoreKernel — orchestration only, no agent business logic"
+
+[[bin]]
+name = "avalon-core"
+path = "src/main.rs"
+
+[dependencies]
+avalon-agent-host = { workspace = true }
+avalon-audit = { path = "../audit" }
+avalon-data-service = { path = "../../services/data-service" }
+avalon-events = { path = "../events" }
+avalon-ipc = { path = "../ipc" }
+avalon-llm-gateway = { path = "../../services/llm-gateway" }
+avalon-network = { path = "../network" }
+avalon-permissions = { path = "../permissions" }
+avalon-privilege-broker = { workspace = true }
+avalon-registry = { path = "../registry" }
+avalon-scheduler = { path = "../../services/scheduler" }
+avalon-security = { workspace = true }
+avalon-system = { path = "../system" }
+avalon-updates = { path = "../updates" }
+avalon-vault = { path = "../vault" }
+avalon-workspace = { path = "../workspace" }
+anyhow = { workspace = true }
+base64 = { workspace = true }
+chrono = { workspace = true }
+clap = { version = "4", features = ["derive"] }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+axum = { version = "0.8", features = ["json"] }
+tower-http = { version = "0.6", features = ["cors"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }
+chrono = { workspace = true }
+avalon-events = { path = "../events" }
+avalon-permissions = { path = "../permissions" }
+avalon-privilege-broker = { workspace = true }
+avalon-network = { path = "../network" }
+avalon-agent-host = { workspace = true }
+avalon-registry = { path = "../registry" }
+avalon-system = { path = "../system" }
+avalon-security = { workspace = true }

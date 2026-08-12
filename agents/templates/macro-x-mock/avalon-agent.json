@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "agent_id": "macro-x",
+  "name": "Macro-X",
+  "version": "0.1.0",
+  "publisher": "Avalon Capital",
+  "description": "Macro intelligence agent — mock package for Core contract validation",
+  "runtime": "python",
+  "entrypoint": "main.py",
+  "permissions": [
+    "filesystem.read.workspace",
+    "filesystem.write.workspace",
+    "network.api.fred",
+    "network.api.bls",
+    "application.excel.open",
+    "application.excel.write",
+    "memory.read.self",
+    "memory.write.self"
+  ],
+  "network": {
+    "allowlist": [
+      "api.stlouisfed.org",
+      "api.bls.gov",
+      "apps.bea.gov",
+      "ec.europa.eu",
+      "data-api.ecb.europa.eu",
+      "api.worldbank.org",
+      "sdmx.oecd.org"
+    ]
+  },
+  "resources": {
+    "max_memory_mb": 1024
+  },
+  "events": {
+    "publishes": ["macro.release.published", "macro.regime.changed", "prediction.created"],
+    "subscribes": ["data.updated", "system.started"]
+  },
+  "capabilities": ["macro", "excel", "charts", "local-llm"],
+  "minimum_core_version": "0.1.0",
+  "model_policy": { "local_only_ok": true }
+}
