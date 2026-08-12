@@ -1,0 +1,25 @@
+d10011a|2026-08-03|fix(desktop): stop agent daemons on exit so installs clean up
+0d71881|2026-08-03|fix(desktop): find bundled Macro-X and keep it running
+1af91a4|2026-08-03|fix(agents): stop Macro-X from exiting after one cycle
+fd3c71b|2026-08-03|fix: make Macro-X fully functional on desktop Windows
+5827f7b|2026-08-03|fix(agents): correct repo root path and honest agent start status
+035ef7f|2026-08-03|fix(agents): stop Macro-X crash on Windows Python/SDK
+54627c3|2026-08-03|feat(macro-x): ship Codex brokerized Macro-X with INSUFFICIENT_EVIDENCE
+f69c971|2026-08-03|fix(ui): show real install errors instead of Failed to fetch
+1b0665d|2026-08-02|feat(windows): install Macro-X via incoming drop without cargo
+8e27088|2026-08-02|chore: ignore python egg-info from codex-setup
+d6635e5|2026-08-02|feat(codex): unblock Macro-X delivery in avalon-capital monorepo
+87c44ba|2026-08-02|chore(sdk): sync agents/sdk with python-sdk env wiring
+4da82fb|2026-08-02|feat(agents): enable Codex Macro-X install pipeline
+c24c07c|2026-08-02|chore(installer): NSIS fallback en français
+77a15ea|2026-08-02|feat(ui): localiser le Command Center en français
+26f8bed|2026-07-31|feat: add secrets-gated Windows Authenticode signing pipeline
+57716e4|2026-07-31|docs: record passing Windows install acceptance tests
+c48dd94|2026-07-31|fix: materialize vault on first run and harden install smoke
+e9363c1|2026-07-31|test: verify clean Windows install and uninstall paths
+76a6ad2|2026-07-31|fix: stage Tauri NSIS/MSI from workspace target/release/bundle
+b11e58a|2026-07-31|fix: isolate desktop PostCSS and harden Clerk CI demo mode
+3b24a14|2026-07-31|fix: exclude Platform-Core trees from Next.js tsc/eslint
+efcb80e|2026-07-31|ci: add Windows Tauri NSIS/MSI packaging pipeline
+4c8b9fe|2026-07-31|chore: ignore Python bytecode and drop accidental pycache
+ed3efe1|2026-07-31|feat: add Avalon Agentique Platform-Core (secure local agent OS)

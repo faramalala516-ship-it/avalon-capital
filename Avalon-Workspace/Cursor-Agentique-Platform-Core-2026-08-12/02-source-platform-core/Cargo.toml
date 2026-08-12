@@ -1,0 +1,89 @@
+[workspace]
+resolver = "2"
+members = [
+  "core/security",
+  "core/vault",
+  "core/audit",
+  "core/permissions",
+  "core/events",
+  "core/ipc",
+  "core/registry",
+  "core/workspace",
+  "core/network",
+  "core/updates",
+  "core/system",
+  "core/kernel",
+  "services/agent-host",
+  "services/privilege-broker",
+  "services/data-service",
+  "services/scheduler",
+  "services/llm-gateway",
+  "packages/rust-sdk",
+  "apps/desktop/src-tauri",
+]
+default-members = [
+  "core/kernel",
+  "core/security",
+  "core/vault",
+  "core/audit",
+  "core/permissions",
+  "core/events",
+  "core/network",
+  "services/privilege-broker",
+  "services/agent-host",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "LicenseRef-Avalon-Proprietary"
+authors = ["Avalon Capital"]
+repository = "https://github.com/avalon-capital/avalon-agentique-platform"
+
+[workspace.dependencies]
+aes-gcm = "0.10"
+anyhow = "1"
+async-trait = "0.1"
+base64 = "0.22"
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "6"
+hex = "0.4"
+hkdf = "0.12"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "process", "io-util", "fs", "signal"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+zeroize = { version = "1", features = ["zeroize_derive"] }
+jsonschema = "0.28"
+parking_lot = "0.12"
+tempfile = "3"
+rusqlite = { version = "0.32", features = ["bundled"] }
+hmac = "0.12"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+avalon-security = { path = "core/security" }
+avalon-vault = { path = "core/vault" }
+avalon-audit = { path = "core/audit" }
+avalon-permissions = { path = "core/permissions" }
+avalon-events = { path = "core/events" }
+avalon-ipc = { path = "core/ipc" }
+avalon-registry = { path = "core/registry" }
+avalon-workspace = { path = "core/workspace" }
+avalon-network = { path = "core/network" }
+avalon-updates = { path = "core/updates" }
+avalon-system = { path = "core/system" }
+avalon-kernel = { path = "core/kernel" }
+avalon-agent-host = { path = "services/agent-host" }
+avalon-privilege-broker = { path = "services/privilege-broker" }
+avalon-data-service = { path = "services/data-service" }
+avalon-scheduler = { path = "services/scheduler" }
+avalon-llm-gateway = { path = "services/llm-gateway" }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

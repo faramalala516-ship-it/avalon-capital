@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://avalon.capital/schemas/avalon-agent.schema.json",
+  "title": "Avalon Agent Manifest",
+  "type": "object",
+  "required": ["schema_version", "agent_id", "name", "version", "runtime", "entrypoint"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "agent_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+    "name": {"type": "string"},
+    "version": {"type": "string"},
+    "runtime": {"type": "string", "enum": ["python", "native"]},
+    "entrypoint": {"type": "string"}
+  }
+}

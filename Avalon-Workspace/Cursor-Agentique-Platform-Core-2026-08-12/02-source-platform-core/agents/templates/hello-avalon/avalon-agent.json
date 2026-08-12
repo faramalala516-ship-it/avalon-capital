@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "agent_id": "hello-avalon",
+  "name": "HelloAvalonAgent",
+  "version": "0.1.0",
+  "publisher": "Avalon Capital",
+  "description": "SDK validation agent — registration, health, events, workspace, tools, permission denied",
+  "runtime": "python",
+  "entrypoint": "main.py",
+  "permissions": [
+    "filesystem.read.workspace",
+    "filesystem.write.workspace",
+    "memory.read.self",
+    "memory.write.self"
+  ],
+  "network": {},
+  "resources": {},
+  "events": {
+    "publishes": ["agent.health"],
+    "subscribes": ["system.started"]
+  },
+  "capabilities": ["sdk-demo"],
+  "minimum_core_version": "0.1.0"
+}

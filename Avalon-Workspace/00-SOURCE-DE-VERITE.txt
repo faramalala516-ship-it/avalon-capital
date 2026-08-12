@@ -1,0 +1,18 @@
+# Avalon Workspace — pointeur source de vérité
+
+Ce fichier est à laisser à la racine de `Dropbox/avalon workspace/`.
+
+## Code agents / Platform-Core
+- GitHub: https://github.com/faramalala516-ship-it/avalon-capital
+- Branche: cursor/avalon-agentique-platform-core-14e5
+- PR: https://github.com/faramalala516-ship-it/avalon-capital/pull/3
+- Export local: ./Cursor-Agentique-Platform-Core-2026-08-12/
+- Macro-X vérité: 0.3.4-codex (lifecycle=daemon)
+
+## SaaS web Avalon Capital
+- Même repo, arborescence Next.js (`app/`, `components/`) sur `main`
+
+## Ne pas confondre
+- Dropbox = archives + exports + WIP nommé
+- GitHub = source de vérité code
+- LocalAppData Avalon = runtime installé (pas du source)

@@ -1,0 +1,23 @@
+[package]
+name = "avalon-agent-host"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+avalon-audit = { path = "../../core/audit" }
+avalon-events = { path = "../../core/events" }
+avalon-permissions = { path = "../../core/permissions" }
+avalon-registry = { path = "../../core/registry" }
+avalon-security = { workspace = true }
+avalon-system = { path = "../../core/system" }
+avalon-workspace = { path = "../../core/workspace" }
+chrono = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+sha2 = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

@@ -50,3 +50,7 @@ __pycache__/
 *.egg-info/
 agents/codex-drop/**/vendor/**/__pycache__/
 apps/desktop/src-tauri/resources/
+
+# Local Dropbox-oriented export zip (folder Avalon-Workspace/ is tracked)
+Avalon-Workspace-*.zip
+
